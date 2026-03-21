@@ -1,0 +1,38 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock
+
+# Node / Tauri frontend
+node_modules/
+apps/desktop/dist/
+apps/desktop/.next/
+
+# Tauri build artifacts
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# Environment / secrets
+.env
+.env.*
+*.enc
+*.key
+
+# User data (never commit credentials)
+~/.claude-sentinel/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test artifacts
+/tmp/cst-test-*
+
+# Devbox
+.devbox/

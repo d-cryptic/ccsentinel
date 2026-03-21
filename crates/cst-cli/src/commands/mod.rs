@@ -1,0 +1,16 @@
+pub mod auto_switch;
+pub mod daemon;
+pub mod doctor;
+pub mod history;
+pub mod init;
+pub mod list;
+pub mod profile;
+pub mod quota;
+pub mod run;
+pub mod session;
+pub mod shell;
+pub mod stats;
+pub mod status;
+pub mod sync;
+pub mod templates;
+pub mod tui;
