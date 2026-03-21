@@ -2,46 +2,57 @@
 
 ## IN PROGRESS
 
-- [ ] Bootstrap: Cargo workspace, devbox, direnv, CLAUDE.md, docs skeleton
+- [ ] apps/desktop: Tauri app setup + neubrutalism B&W design system
 
 ## NEXT
 
-- [ ] cst-core: data dir init, config.toml, Profile/Session structs (with TDD)
-- [ ] cst-core: profile CRUD — new/list/rm/clone/import (with TDD)
-- [ ] cst-core: session CRUD + symlink setup (with TDD)
-- [ ] cst-core: auth — OAuth symlink swap (with TDD)
-- [ ] cst-core: auth — API key pool + Keychain (with TDD)
-- [ ] cst-core: auth — AWS Bedrock + Vertex AI env injection (with TDD)
-- [ ] cst-core: 3-layer settings merge (with TDD)
-- [ ] cst-core: MCP overrides merge (with TDD)
-- [ ] cst-cli: shell-init, _env, cst use wrapper
-- [ ] cst-cli: all core commands (use/list/status/new/rm/etc.)
-- [ ] cst-core: auto-switch daemon (tokio, rate limit detection)
-- [ ] cst-core: quota intelligence (remaining, warnings, scheduler)
-- [ ] cst-core: stats tracking + cost estimation
-- [ ] cst-cli: TUI (ratatui)
-- [ ] cst-cli: cst init first-run wizard
-- [ ] cst-cli: cst doctor health check
-- [ ] cst-cli: cst top live dashboard
-- [ ] apps/desktop: Tauri app setup
-- [ ] apps/desktop: neubrutalism CSS design system
-- [ ] apps/desktop: menu bar / system tray
+- [ ] cst-cli: cst top live real-time dashboard (ratatui)
+- [ ] apps/desktop: menu bar / system tray (macOS + Linux/Windows)
 - [ ] apps/desktop: 5-tab full management window
+- [ ] GitHub Actions CI (test + build on push)
+- [ ] cst starship module
+- [ ] cst tmux status segment
 
 ## BACKLOG
 
 - [ ] Homebrew tap for easy install
-- [ ] GitHub Actions CI (test + build on push)
 - [ ] 1Password / Doppler integration for API keys
 - [ ] Team profile sharing (git-based config sync)
 - [ ] Raycast / Alfred extension for quick switching
 - [ ] Smart round-robin: distribute usage across profiles
-- [ ] Git remote URL → auto-detect profile
-- [ ] cst starship module
-- [ ] cst tmux status segment
+- [ ] Git remote URL → auto-detect profile (.cstrc)
 - [ ] Windows installer (.msi)
+- [ ] GitHub Actions CI (release binaries via goreleaser)
 
 ## DONE
 
 - [x] Plan: architecture, data model, feature set, tech stack
 - [x] Bootstrap: repo directories, Cargo.toml workspace, .gitignore, devbox.json, .envrc, Makefile
+- [x] CLAUDE.md, project .claude/ skills (cst-domain, rust-tdd)
+- [x] cst-core: platform paths (data_dir, profiles_dir, session_dir, etc.)
+- [x] cst-core: GlobalConfig (current profile:session), load/save
+- [x] cst-core: Profile/ProfileManager CRUD (new/list/rm/clone/rename/import)
+- [x] cst-core: Session/SessionManager CRUD + symlink setup for shared config
+- [x] cst-core: AuthType (OAuth/Api/Bedrock/Vertex) + all auth modules
+- [x] cst-core: OAuth symlink swap (activate/deactivate/import)
+- [x] cst-core: API key pool with Keychain storage (add/retrieve/rotate)
+- [x] cst-core: AWS Bedrock env injection
+- [x] cst-core: Google Vertex AI env injection
+- [x] cst-core: 3-layer settings deep merge (global + profile + session → write)
+- [x] cst-core: MCP overrides (disable/add per profile)
+- [x] cst-core: env.toml overlay (per-session extra env vars)
+- [x] cst-core: ProfileHooks (pre/post switch_in/out, non-fatal sh -c execution)
+- [x] cst-core: SessionStats (session_count, rate_limit_hits, tokens, cost estimate)
+- [x] cst-core: built-in profile templates (pro/max/api/bedrock/vertex)
+- [x] cst-core: auto_switch/config.rs — AutoSwitchConfig with fallback chain + schedule
+- [x] cst-core: auto_switch/detector.rs — rate-limit pattern detection
+- [x] cst-core: auto_switch/switch_log.rs — persistent JSONL event log
+- [x] cst-core: auto_switch/scheduler.rs — quota reset scheduler + time_until_refill
+- [x] cst-core: auto_switch/daemon.rs — tokio async watcher, trigger_switch, switch-back
+- [x] cst-cli: full clap CLI (all commands: use/status/list/new/rm/session/daemon/etc.)
+- [x] cst-cli: shell-init (zsh/bash/fish/powershell), _env, precmd auto-switch check
+- [x] cst-cli: daemon start/stop/status/logs wired to cst-core
+- [x] cst-cli: auto-switch configure/log/test-chain/pause
+- [x] cst-cli: history run() + why() reading switch log
+- [x] cst-cli: ratatui TUI (4 tabs: Profiles, Sessions, Auto-Switch, History)
+- [x] 81 unit tests passing; binary runs correctly
