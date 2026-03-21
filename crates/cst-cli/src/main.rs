@@ -7,6 +7,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::{generate, Shell};
 
 mod commands;
+mod tui;
 use commands::{profile as profile_cmd, session as session_cmd, shell as shell_cmd};
 
 #[derive(Parser)]
@@ -146,7 +147,6 @@ enum Commands {
     },
 
     /// Open the interactive TUI.
-    #[command(alias = "tui")]
     Tui,
 
     /// First-run setup wizard.
