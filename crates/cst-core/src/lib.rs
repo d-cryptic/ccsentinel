@@ -4,10 +4,12 @@
 //! The CLI (`cst-cli`) and Tauri app both depend on this crate.
 
 pub mod auth;
+pub mod auto_detect;
 pub mod auto_switch;
 pub mod broadcast;
 pub mod config;
 pub mod env_overlay;
+pub mod history_parser;
 pub mod hooks;
 pub mod merge;
 pub mod mcp;

@@ -155,6 +155,23 @@ enum Commands {
         already_applied_id: String,
     },
 
+    /// Check .cstrc in the directory tree and emit env exports if a different
+    /// profile should be active.  Called by the shell precmd hook.
+    #[command(name = "_auto-detect", hide = true)]
+    AutoDetect {
+        /// Directory to search from (usually $PWD).
+        dir: String,
+        /// Current profile:session (CST_CURRENT).
+        #[arg(default_value = "")]
+        current: String,
+    },
+
+    /// Show what `.cstrc` would activate in the current (or given) directory.
+    AutoDetectStatus {
+        #[arg(default_value = ".")]
+        dir: String,
+    },
+
     /// List available profile templates.
     Templates,
 
@@ -266,6 +283,12 @@ async fn main() -> Result<()> {
         Some(Commands::Env { profile_session }) => shell_cmd::env_cmd(&profile_session),
         Some(Commands::BroadcastSwitch { current, already_applied_id }) => {
             commands::switch_all::broadcast_switch_check(&current, &already_applied_id)
+        }
+        Some(Commands::AutoDetect { dir, current }) => {
+            commands::auto_detect::check(&dir, &current)
+        }
+        Some(Commands::AutoDetectStatus { dir }) => {
+            commands::auto_detect::status(&dir)
         }
         Some(Commands::Status) => commands::status::run(),
         Some(Commands::List) => commands::list::run(),

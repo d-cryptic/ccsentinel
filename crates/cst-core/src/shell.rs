@@ -75,6 +75,13 @@ _cst_check_switch() {
             printf '⚡ claude-sentinel: broadcast → %s\n' "$CST_CURRENT" >&2
         fi
     fi
+
+    # 3. .cstrc auto-detect (direnv-style per-project profile selection)
+    local _cst_ad
+    _cst_ad="$(command cst _auto-detect "${PWD}" "${CST_CURRENT:-}" 2>/dev/null)"
+    if [ -n "$_cst_ad" ]; then
+        eval "$_cst_ad"
+    fi
 }
 
 if [ -n "$ZSH_VERSION" ]; then
@@ -114,6 +121,10 @@ function _cst_check_switch --on-event fish_prompt
             eval $_cst_bc
             echo "⚡ claude-sentinel: broadcast → $CST_CURRENT" >&2
         end
+    end
+    set _cst_ad (command cst _auto-detect "$PWD" "$CST_CURRENT" 2>/dev/null)
+    if test -n "$_cst_ad"
+        eval $_cst_ad
     end
 end
 "#
