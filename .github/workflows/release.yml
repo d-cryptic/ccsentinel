@@ -24,25 +24,36 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
             archive: cst-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+            ext: ""
             cross: false
 
           # macOS — x86_64 (cross-compiled on M-series runner)
           - target: x86_64-apple-darwin
             os: macos-latest
             archive: cst-${{ github.ref_name }}-x86_64-apple-darwin.tar.gz
+            ext: ""
             cross: false
 
           # Linux x86_64 — native
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             archive: cst-${{ github.ref_name }}-x86_64-linux.tar.gz
+            ext: ""
             cross: false
 
           # Linux aarch64 — cross via cargo-cross
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             archive: cst-${{ github.ref_name }}-aarch64-linux.tar.gz
+            ext: ""
             cross: true
+
+          # Windows x86_64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: cst-${{ github.ref_name }}-x86_64-windows.zip
+            ext: ".exe"
+            cross: false
 
     steps:
       - uses: actions/checkout@v4
@@ -71,6 +82,14 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             pkg-config libssl-dev libdbus-1-dev libsecret-1-dev
 
+      # Windows: vcpkg openssl
+      - name: Install Windows build deps
+        if: matrix.os == 'windows-latest'
+        run: |
+          vcpkg install openssl:x64-windows-static-md
+          echo "OPENSSL_DIR=C:/vcpkg/installed/x64-windows-static-md" >> $env:GITHUB_ENV
+          echo "OPENSSL_STATIC=1" >> $env:GITHUB_ENV
+
       # Install cargo-cross for aarch64 Linux
       - name: Install cross
         if: matrix.cross
@@ -93,9 +112,13 @@ jobs:
       - name: Package binary
         shell: bash
         run: |
-          BIN=target/${{ matrix.target }}/release/cst
+          BIN="target/${{ matrix.target }}/release/cst${{ matrix.ext }}"
           ARCHIVE="${{ matrix.archive }}"
-          tar czf "$ARCHIVE" -C "$(dirname $BIN)" "$(basename $BIN)"
+          if [[ "$ARCHIVE" == *.zip ]]; then
+            7z a "$ARCHIVE" "$BIN"
+          else
+            tar czf "$ARCHIVE" -C "$(dirname $BIN)" "$(basename $BIN)"
+          fi
           sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
 
       - name: Upload artifact
