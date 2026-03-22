@@ -289,4 +289,103 @@ mod tests {
         std::fs::write(dir.path().join(".cstrc"), "").unwrap();
         assert!(detect(dir.path()).is_none());
     }
+
+    // ── Error / malformed input ───────────────────────────────────────────
+
+    #[test]
+    fn detect_malformed_toml_returns_none() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join(".cstrc"), "profile = [[[invalid toml").unwrap();
+        // Must not panic; silently returns None on parse failure
+        assert!(detect(dir.path()).is_none());
+    }
+
+    #[test]
+    fn detect_only_auto_detect_entries_no_explicit_profile_returns_none_when_no_git_match() {
+        // A .cstrc with only [[auto_detect]] entries and no bare `profile` field:
+        // if no git remote matches, detect() should return None.
+        let dir = TempDir::new().unwrap();
+        let rc = r#"
+[[auto_detect]]
+git_remote_pattern = "github.com/myco/*"
+profile = "work"
+"#;
+        std::fs::write(dir.path().join(".cstrc"), rc).unwrap();
+        // dir is not a git repo, so git_remote_url returns None → no pattern match → None
+        assert!(detect(dir.path()).is_none());
+    }
+
+    // ── glob_match edge cases ─────────────────────────────────────────────
+
+    #[test]
+    fn glob_empty_pattern_matches_empty_value() {
+        assert!(glob_match("", ""));
+    }
+
+    #[test]
+    fn glob_empty_pattern_does_not_match_nonempty_value() {
+        assert!(!glob_match("", "anything"));
+    }
+
+    #[test]
+    fn glob_star_only_matches_any_string() {
+        assert!(glob_match("*", ""));
+        assert!(glob_match("*", "a"));
+        assert!(glob_match("*", "github.com/org/repo"));
+    }
+
+    #[test]
+    fn glob_star_matches_empty_segment() {
+        // "github.com/myco/*" should also match "github.com/myco/" (empty segment after /)
+        assert!(glob_match("github.com/myco/*", "github.com/myco/"));
+    }
+
+    #[test]
+    fn glob_middle_star() {
+        assert!(glob_match("github.com/*/repo", "github.com/myco/repo"));
+        assert!(!glob_match("github.com/*/repo", "github.com/myco/other"));
+    }
+
+    // ── normalise_git_url ─────────────────────────────────────────────────
+
+    #[test]
+    fn normalise_http_url() {
+        assert_eq!(
+            normalise_git_url("http://github.com/myco/repo.git"),
+            "github.com/myco/repo"
+        );
+    }
+
+    #[test]
+    fn normalise_ssh_scheme_url() {
+        assert_eq!(
+            normalise_git_url("ssh://git@github.com/myco/repo.git"),
+            "github.com/myco/repo"
+        );
+    }
+
+    #[test]
+    fn normalise_idempotent() {
+        let bare = "github.com/myco/repo";
+        assert_eq!(normalise_git_url(bare), bare);
+        // Applying twice produces same result
+        assert_eq!(normalise_git_url(&normalise_git_url(bare)), bare);
+    }
+
+    #[test]
+    fn normalise_strips_dot_git_only_once() {
+        // Should not strip double .git.git
+        let url = "github.com/myco/repo.git";
+        assert_eq!(normalise_git_url(url), "github.com/myco/repo");
+    }
+
+    // ── find_cstrc edge cases ─────────────────────────────────────────────
+
+    #[test]
+    fn find_cstrc_in_current_dir() {
+        let dir = TempDir::new().unwrap();
+        let rc = dir.path().join(".cstrc");
+        std::fs::write(&rc, r#"profile = "work""#).unwrap();
+        assert_eq!(find_cstrc(dir.path()).unwrap(), rc);
+    }
 }

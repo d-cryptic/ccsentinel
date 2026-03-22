@@ -176,4 +176,79 @@ mod tests {
         let r = parse_tokens(f.path()).unwrap();
         assert_eq!(r.input_tokens, 42);
     }
+
+    // ── Error paths ────────────────────────────────────────────────────────
+
+    #[test]
+    fn parse_tokens_missing_file_errors() {
+        let result = parse_tokens(std::path::Path::new("/nonexistent/path/history.jsonl"));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn truncated_json_line_is_skipped() {
+        // Partial JSON line (truncated mid-write) must not panic or corrupt totals
+        let jsonl = [
+            r#"{"usage":{"input_tokens":10,"output_tokens":5}}"#,
+            r#"{"usage":{"input_tokens":20"#,  // truncated
+            r#"{"usage":{"input_tokens":30,"output_tokens":15}}"#,
+        ]
+        .join("\n");
+        let r = sum_tokens(&jsonl);
+        // Only the two complete lines should be counted
+        assert_eq!(r.input_tokens, 40);
+        assert_eq!(r.output_tokens, 20);
+    }
+
+    // ── Edge cases ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn windows_line_endings_handled() {
+        // CRLF line endings should not break parsing
+        let jsonl = "{\"usage\":{\"input_tokens\":10,\"output_tokens\":5}}\r\n{\"usage\":{\"input_tokens\":20,\"output_tokens\":8}}\r\n";
+        let r = sum_tokens(jsonl);
+        assert_eq!(r.input_tokens, 30);
+        assert_eq!(r.output_tokens, 13);
+    }
+
+    #[test]
+    fn both_toplevel_and_nested_usage_are_accumulated() {
+        // An event with BOTH top-level usage AND message.usage accumulates both.
+        // This documents the current (additive) behaviour: callers should not
+        // emit events where both fields carry the same tokens.
+        let jsonl = r#"{"usage":{"input_tokens":100,"output_tokens":50},"message":{"usage":{"input_tokens":200,"output_tokens":80}}}"#;
+        let r = sum_tokens(jsonl);
+        assert_eq!(r.input_tokens, 300);   // 100 + 200
+        assert_eq!(r.output_tokens, 130);  // 50  + 80
+    }
+
+    #[test]
+    fn zero_value_fields_dont_inflate_totals() {
+        let jsonl = r#"{"usage":{"input_tokens":0,"output_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}"#;
+        assert_eq!(sum_tokens(jsonl), HistoryTokens::default());
+    }
+
+    #[test]
+    fn cost_zero_for_zero_tokens() {
+        assert_eq!(HistoryTokens::default().estimated_cost_usd(), 0.0);
+    }
+
+    #[test]
+    fn cost_proportional_to_tokens() {
+        let t1 = HistoryTokens { input_tokens: 1_000_000, ..Default::default() };
+        let t2 = HistoryTokens { input_tokens: 2_000_000, ..Default::default() };
+        assert!((t2.estimated_cost_usd() - 2.0 * t1.estimated_cost_usd()).abs() < 1e-9);
+    }
+
+    #[test]
+    fn entry_without_usage_field_is_silently_skipped() {
+        let jsonl = r#"{"type":"tool_use","id":"x","name":"bash","input":{}}"#;
+        assert_eq!(sum_tokens(jsonl), HistoryTokens::default());
+    }
+
+    #[test]
+    fn null_usage_field_is_skipped() {
+        let jsonl = r#"{"usage":null,"message":{"usage":null}}"#;
+        assert_eq!(sum_tokens(jsonl), HistoryTokens::default());
+    }
 }

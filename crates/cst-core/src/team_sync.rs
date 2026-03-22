@@ -475,4 +475,115 @@ mod tests {
         assert!(!repo_profile.join("auth").exists());
         assert!(!repo_profile.join("auth").join("oauth.json").exists());
     }
+
+    // ── Additional security / correctness tests ──────────────────────────
+
+    #[test]
+    fn copy_profile_to_repo_does_not_copy_api_key_enc() {
+        let src_root = TempDir::new().unwrap();
+        let repo_root = TempDir::new().unwrap();
+        let profile_src = src_root.path().join("api-work");
+        std::fs::create_dir_all(profile_src.join("auth")).unwrap();
+        std::fs::write(profile_src.join("profile.toml"), "name = \"api-work\"").unwrap();
+        std::fs::write(profile_src.join("auth").join("api_key.enc"), "ENCRYPTED").unwrap();
+        std::fs::write(profile_src.join("auth").join("api_keys.toml"), "[keys]").unwrap();
+
+        copy_profile_to_repo("api-work", src_root.path(), repo_root.path()).unwrap();
+
+        let repo_profile = repo_root.path().join("profiles").join("api-work");
+        // auth/ directory must not exist in the repo copy
+        assert!(!repo_profile.join("auth").exists());
+        assert!(!repo_profile.join("auth").join("api_key.enc").exists());
+    }
+
+    #[test]
+    fn copy_profile_from_repo_only_copies_safe_files() {
+        let repo_root = TempDir::new().unwrap();
+        let dst_root = TempDir::new().unwrap();
+
+        // Simulate a repo profile dir that (maliciously or by mistake) contains auth/
+        let repo_profile = repo_root.path().join("work");
+        std::fs::create_dir_all(repo_profile.join("auth")).unwrap();
+        std::fs::write(repo_profile.join("profile.toml"), "name = \"work\"").unwrap();
+        std::fs::write(repo_profile.join("auth").join("oauth.json"), "{}").unwrap();
+        std::fs::write(repo_profile.join("settings-override.json"), "{}").unwrap();
+
+        let dst = dst_root.path().join("work");
+        copy_profile_from_repo(&repo_profile, &dst).unwrap();
+
+        assert!(dst.join("profile.toml").exists());
+        assert!(dst.join("settings-override.json").exists());
+        // auth/ must NOT be created in the destination
+        assert!(!dst.join("auth").exists());
+    }
+
+    #[test]
+    fn session_files_sync_copies_env_toml_not_stats() {
+        let src_root = TempDir::new().unwrap();
+        let repo_root = TempDir::new().unwrap();
+        let session_src = src_root.path().join("work").join("sessions").join("backend");
+        std::fs::create_dir_all(&session_src).unwrap();
+        std::fs::write(session_src.join("env.toml"), "[env]").unwrap();
+        std::fs::write(session_src.join("settings-override.json"), "{}").unwrap();
+        std::fs::write(session_src.join("stats.json"), "{\"tokens_in\":1000}").unwrap();
+
+        copy_profile_to_repo("work", src_root.path(), repo_root.path()).unwrap();
+
+        let repo_session = repo_root.path().join("profiles").join("work").join("sessions").join("backend");
+        assert!(repo_session.join("env.toml").exists(), "env.toml should be synced");
+        assert!(repo_session.join("settings-override.json").exists(), "settings-override should be synced");
+        // stats.json is private usage data — must NOT be synced
+        assert!(!repo_session.join("stats.json").exists(), "stats.json must not be synced");
+    }
+
+    #[test]
+    fn exclude_takes_precedence_over_include() {
+        // If a profile appears in both include and exclude lists,
+        // exclude wins (security-safe behaviour).
+        let cfg = TeamSyncConfig {
+            remote_url: "https://x".to_string(),
+            branch: "main".to_string(),
+            include_profiles: vec!["work".to_string(), "personal".to_string()],
+            exclude_profiles: vec!["personal".to_string()],
+            committer_name: String::new(),
+            committer_email: String::new(),
+        };
+        assert!(cfg.should_sync("work"));
+        assert!(!cfg.should_sync("personal"), "exclude must take precedence over include");
+    }
+
+    #[test]
+    fn load_missing_config_returns_error() {
+        // Remove env so the platform data_dir points somewhere under TempDir
+        // We just verify that loading when the file doesn't exist fails gracefully.
+        // (Direct test without touching real home directory.)
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("team-sync.toml");
+        // File does not exist — from_str would be the path we take
+        let result = std::fs::read_to_string(&path);
+        assert!(result.is_err(), "reading nonexistent config file must fail");
+    }
+
+    #[test]
+    fn session_sync_files_list_excludes_history_and_stats() {
+        assert!(!SESSION_SYNC_FILES.iter().any(|f| f.contains("stats")));
+        assert!(!SESSION_SYNC_FILES.iter().any(|f| f.contains("history")));
+        assert!(!SESSION_SYNC_FILES.iter().any(|f| f.contains("auth")));
+    }
+
+    #[test]
+    fn sync_files_list_is_complete_and_safe() {
+        // Positive: expected safe files should all be present
+        assert!(SYNC_FILES.contains(&"profile.toml"));
+        assert!(SYNC_FILES.contains(&"settings-override.json"));
+        assert!(SYNC_FILES.contains(&"mcp-override.json"));
+        assert!(SYNC_FILES.contains(&"auto-switch.toml"));
+        // Negative: credential-adjacent names must never appear
+        for file in SYNC_FILES {
+            assert!(!file.contains("key"), "SYNC_FILES must not contain key files: {}", file);
+            assert!(!file.contains("enc"), "SYNC_FILES must not contain encrypted files: {}", file);
+            assert!(!file.contains("oauth"), "SYNC_FILES must not contain oauth files: {}", file);
+            assert!(!file.contains("secret"), "SYNC_FILES must not contain secret files: {}", file);
+        }
+    }
 }

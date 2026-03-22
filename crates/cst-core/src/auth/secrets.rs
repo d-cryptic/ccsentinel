@@ -220,4 +220,91 @@ mod tests {
         let back: SecretSource = toml::from_str(&toml).unwrap();
         assert_eq!(s, back);
     }
+
+    // ── describe security ─────────────────────────────────────────────────
+
+    #[test]
+    fn describe_1password_contains_reference_not_secret() {
+        // describe() must show the REFERENCE (vault path), not a retrieved value
+        let reference = "op://Personal/Claude/credential";
+        let s = SecretSource::OnePassword { reference: reference.to_string() };
+        let desc = s.describe();
+        assert!(desc.contains(reference), "describe should include the op:// reference for diagnostics");
+        assert!(!desc.contains("sk-ant"), "describe must never embed an actual secret");
+    }
+
+    #[test]
+    fn describe_doppler_no_project_no_config() {
+        let s = SecretSource::Doppler {
+            secret_name: "ANTHROPIC_KEY".to_string(),
+            project: None,
+            config: None,
+        };
+        let desc = s.describe();
+        assert!(desc.contains("ANTHROPIC_KEY"));
+        // No extra cruft when no project/config
+        assert!(!desc.contains("project="));
+        assert!(!desc.contains("config="));
+    }
+
+    #[test]
+    fn describe_doppler_with_both_project_and_config() {
+        let s = SecretSource::Doppler {
+            secret_name: "KEY".to_string(),
+            project: Some("myapp".to_string()),
+            config: Some("prd".to_string()),
+        };
+        let desc = s.describe();
+        assert!(desc.contains("project=myapp"));
+        assert!(desc.contains("config=prd"));
+    }
+
+    // ── env var edge cases ────────────────────────────────────────────────
+
+    #[test]
+    fn env_var_empty_value_succeeds() {
+        // An env var set to "" is present and retrievable (empty string is valid)
+        unsafe { std::env::set_var("_CST_TEST_EMPTY", ""); }
+        let src = SecretSource::EnvVar { var_name: "_CST_TEST_EMPTY".to_string() };
+        assert_eq!(src.retrieve().unwrap(), "");
+        unsafe { std::env::remove_var("_CST_TEST_EMPTY"); }
+    }
+
+    // ── check_tool_available ──────────────────────────────────────────────
+
+    #[test]
+    fn check_tool_available_keychain_always_ok() {
+        let s = SecretSource::Keychain { account: "test".to_string() };
+        // Keychain provider needs no external CLI
+        assert!(s.check_tool_available().is_ok());
+    }
+
+    #[test]
+    fn check_tool_available_env_var_always_ok() {
+        let s = SecretSource::EnvVar { var_name: "ANYTHING".to_string() };
+        assert!(s.check_tool_available().is_ok());
+    }
+
+    // ── serde tag field ───────────────────────────────────────────────────
+
+    #[test]
+    fn serde_json_tag_field_is_provider() {
+        let s = SecretSource::Keychain { account: "acc".to_string() };
+        let json = serde_json::to_string(&s).unwrap();
+        // The discriminant tag must be "provider" per #[serde(tag = "provider")]
+        assert!(json.contains("\"provider\""));
+        assert!(json.contains("\"keychain\""));
+    }
+
+    #[test]
+    fn serde_roundtrip_doppler_with_options() {
+        let s = SecretSource::Doppler {
+            secret_name: "MY_SECRET".to_string(),
+            project: Some("proj".to_string()),
+            config: Some("dev".to_string()),
+        };
+        let json = serde_json::to_string(&s).unwrap();
+        let back: SecretSource = serde_json::from_str(&json).unwrap();
+        assert_eq!(s, back);
+    }
 }
