@@ -40,6 +40,9 @@ enum Commands {
     /// Show quota used %, tokens today, and time to reset.
     Remaining,
 
+    /// Live real-time usage dashboard (like htop for Claude).
+    Top,
+
     /// Show switch history with reasons.
     History,
 
@@ -140,6 +143,20 @@ enum Commands {
     /// Validate a profile's config and credentials.
     Validate { profile: String },
 
+    /// Print Starship custom module output (add `eval "$(cst starship --config)"` to starship.toml).
+    Starship {
+        /// Print starship.toml config snippet instead of module output.
+        #[arg(long)]
+        config: bool,
+    },
+
+    /// Print tmux status bar segment (add `set -g status-right "#(cst tmux)"`).
+    Tmux {
+        /// Print tmux.conf snippet instead of segment output.
+        #[arg(long)]
+        config: bool,
+    },
+
     /// Generate shell tab completions.
     Completions {
         /// Shell: bash, zsh, fish, powershell
@@ -224,6 +241,7 @@ async fn main() -> Result<()> {
         Some(Commands::Status) => commands::status::run(),
         Some(Commands::List) => commands::list::run(),
         Some(Commands::Remaining) => commands::quota::remaining(),
+        Some(Commands::Top) => commands::top::run().await,
         Some(Commands::History) => commands::history::run(),
         Some(Commands::Why) => commands::history::why(),
         Some(Commands::New { name, auth, template }) => {
@@ -248,6 +266,20 @@ async fn main() -> Result<()> {
         }
         Some(Commands::Doctor) => commands::doctor::run(),
         Some(Commands::Validate { profile }) => commands::doctor::validate(&profile),
+        Some(Commands::Starship { config }) => {
+            if config {
+                commands::integrations::starship_config()
+            } else {
+                commands::integrations::starship()
+            }
+        }
+        Some(Commands::Tmux { config }) => {
+            if config {
+                commands::integrations::tmux_config()
+            } else {
+                commands::integrations::tmux_segment()
+            }
+        }
         Some(Commands::Templates) => commands::templates::list(),
         Some(Commands::Init { yes, shell, no_daemon }) => {
             commands::init::run(yes, shell.as_deref(), !no_daemon).await

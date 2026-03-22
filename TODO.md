@@ -2,16 +2,14 @@
 
 ## IN PROGRESS
 
-- [ ] apps/desktop: Tauri app setup + neubrutalism B&W design system
+- [ ] cst-cli: cst top live real-time dashboard (ratatui)
 
 ## NEXT
 
-- [ ] cst-cli: cst top live real-time dashboard (ratatui)
-- [ ] apps/desktop: menu bar / system tray (macOS + Linux/Windows)
-- [ ] apps/desktop: 5-tab full management window
 - [ ] GitHub Actions CI (test + build on push)
 - [ ] cst starship module
 - [ ] cst tmux status segment
+- [ ] Update docs (USAGE.md, DESIGN.md, CONTRIBUTING.md, CHANGELOG.md)
 
 ## BACKLOG
 
@@ -55,4 +53,7 @@
 - [x] cst-cli: auto-switch configure/log/test-chain/pause
 - [x] cst-cli: history run() + why() reading switch log
 - [x] cst-cli: ratatui TUI (4 tabs: Profiles, Sessions, Auto-Switch, History)
+- [x] apps/desktop: Tauri v2 app — system tray, neubrutalism B&W design system
+- [x] apps/desktop: 4-tab window (Profiles, Sessions, Auto-Switch, Stats)
+- [x] apps/desktop: Zustand stores, ProfileManager, SessionGrid, StatsPanel
 - [x] 81 unit tests passing; binary runs correctly

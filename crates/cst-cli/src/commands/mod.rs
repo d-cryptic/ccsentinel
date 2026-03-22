@@ -13,4 +13,6 @@ pub mod stats;
 pub mod status;
 pub mod sync;
 pub mod templates;
+pub mod integrations;
+pub mod top;
 pub mod tui;
