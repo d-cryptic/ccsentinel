@@ -136,12 +136,34 @@ Re-run OAuth login for a profile. Defaults to current profile.
 
 ### `cst add-key <profile> [--slot N]`
 
-Add an API key to a profile's key pool. Prompts securely; stores in macOS Keychain / libsecret / WinCred.
+Add an API key to a profile's key pool. Prompts securely; stores in macOS Keychain / libsecret / WinCred by default.
 
 ```bash
-cst add-key api-work            # slot 1 (default)
+cst add-key api-work            # slot 1 (default) — stored in keychain
 cst add-key api-work --slot 2   # second key for rotation
 ```
+
+**External secret providers** — instead of the keychain, keys can live in 1Password or Doppler. Specify the source reference in `auth/api_keys.toml`:
+
+```toml
+# 1Password: op:// URI
+[[keys]]
+slot = 1
+source = { provider = "one_password", reference = "op://Personal/Claude API/credential" }
+note = "personal claude pro key"
+
+# Doppler secret
+[[keys]]
+slot = 2
+source = { provider = "doppler", secret_name = "ANTHROPIC_API_KEY", project = "myapp", config = "prd" }
+
+# Plain env var (useful in CI)
+[[keys]]
+slot = 3
+source = { provider = "env_var", var_name = "ANTHROPIC_API_KEY_BACKUP" }
+```
+
+Both `op` (1Password CLI) and `doppler` must be installed and authenticated. `cst validate <profile>` shows which provider each slot uses.
 
 ### `cst validate <profile>`
 
@@ -234,6 +256,53 @@ cst use api-backup:backend
 ```
 
 Use case: you're on `work:backend` and hit a rate limit. Switch just the `backend` session to `api-backup:backend` to get different credentials, while other sessions stay on `work`.
+
+## Team Profile Sharing
+
+Share profile configs (settings, MCP overrides, env overlays, auto-switch rules) with your team via a shared git remote. Credentials are **never** synced.
+
+### Setup
+
+```bash
+# Connect to a shared git remote
+cst team init git@github.com:myorg/claude-profiles.git
+
+# Push your profiles
+cst team push
+
+# On another machine — pull the team profiles
+cst team pull
+
+# Show sync status
+cst team status
+```
+
+### What is synced
+
+| File | Description |
+|------|-------------|
+| `profile.toml` | Profile metadata (auth type, description) |
+| `settings-override.json` | Claude settings overrides |
+| `mcp-override.json` | MCP server add/disable list |
+| `auto-switch.toml` | Fallback chain, schedule, round-robin config |
+| `env.toml` | Per-session extra environment variables |
+
+### What is never synced
+
+- `auth/` — OAuth tokens, API keys, AWS/Vertex credentials
+- `stats.json`, `history.jsonl` — usage data (stays local)
+
+### Filter which profiles to sync
+
+Add to `~/.claude-sentinel/team-sync.toml`:
+
+```toml
+# Only sync these profiles (empty = sync all)
+include_profiles = ["work", "work-staging"]
+
+# Always exclude these
+exclude_profiles = ["personal"]
+```
 
 ## Auto-Detect (`.cstrc`)
 

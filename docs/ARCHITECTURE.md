@@ -315,9 +315,10 @@ Steps 1 and 2 come from the daemon. Step 3 is purely directory-driven with no da
 
 | Module | Purpose |
 |--------|---------|
-| `cst-core::auto_detect` | `.cstrc` walk-up, git pattern matching |
+| `cst-core::auth` | OAuth, API key (+ 1Password/Doppler/EnvVar), Bedrock, Vertex |
+| `cst-core::auth::secrets` | `SecretSource` — pluggable provider for API keys |
+| `cst-core::auto_detect` | `.cstrc` walk-up, git URL pattern matching |
 | `cst-core::auto_switch` | Daemon, detector, scheduler, switch log |
-| `cst-core::auth` | OAuth, API key, Bedrock, Vertex auth |
 | `cst-core::broadcast` | `switch-all` TTL file + shell dedup |
 | `cst-core::config` | `GlobalConfig` (current profile:session) |
 | `cst-core::env_overlay` | `env.toml` per-session env injection |
@@ -330,6 +331,7 @@ Steps 1 and 2 come from the daemon. Step 3 is purely directory-driven with no da
 | `cst-core::session` | Session CRUD + symlink setup |
 | `cst-core::shell` | `shell-init` code + `_env` exports |
 | `cst-core::stats` | `SessionStats` (tokens, cost, rate limits) |
+| `cst-core::team_sync` | Git-based profile config sharing (push/pull) |
 | `cst-core::templates` | Built-in profile templates |
 
 ## Crate Dependencies

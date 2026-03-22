@@ -2,18 +2,19 @@
 
 ## IN PROGRESS
 
-(nothing — backlog items complete)
+(nothing)
 
 ## NEXT
 
-- [ ] Homebrew tap formula
-- [ ] 1Password / Doppler integration for API keys
+- [ ] Publish Homebrew tap (create github.com/d-cryptic/homebrew-claude-sentinel repo, fill in sha256s)
+- [ ] Publish to crates.io (`cargo publish -p cst-cli`)
+- [ ] `cst add-key --source op://...` interactive source picker in CLI wizard
 
 ## BACKLOG
 
-- [ ] Team profile sharing (git-based config sync)
-- [ ] Raycast / Alfred extension for quick switching
-- [ ] Windows installer (.msi)
+- [ ] Alfred workflow (parallel to Raycast scripts)
+- [ ] Windows installer (.msi via cargo-wix)
+- [ ] `cst team` conflict resolution (merge strategies for settings overrides)
 
 ## DONE
 

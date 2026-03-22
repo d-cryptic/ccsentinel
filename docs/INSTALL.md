@@ -8,11 +8,22 @@
 curl -fsSL https://raw.githubusercontent.com/d-cryptic/claude-sentinel/main/install.sh | sh
 ```
 
+### macOS — Homebrew
+
+```bash
+brew tap d-cryptic/claude-sentinel
+brew install claude-sentinel
+```
+
+The Homebrew formula automatically installs shell completions for bash, zsh, and fish.
+
 ### Windows (PowerShell)
 
 ```powershell
 iwr https://raw.githubusercontent.com/d-cryptic/claude-sentinel/main/install.ps1 | iex
 ```
+
+Or download `cst-vX.Y.Z-x86_64-windows.zip` from [GitHub Releases](https://github.com/d-cryptic/claude-sentinel/releases), extract, and add `cst.exe` to your PATH.
 
 ### Via Cargo
 
@@ -30,6 +41,7 @@ Each tagged release publishes ready-to-run binaries via GitHub Actions:
 | macOS Intel | `cst-vX.Y.Z-x86_64-apple-darwin.tar.gz` |
 | Linux x86_64 | `cst-vX.Y.Z-x86_64-linux.tar.gz` |
 | Linux ARM64 | `cst-vX.Y.Z-aarch64-linux.tar.gz` |
+| Windows x86_64 | `cst-vX.Y.Z-x86_64-windows.zip` |
 
 Each archive ships a `.sha256` checksum file. Download and install manually:
 

@@ -33,6 +33,15 @@ cst add-key api-work --slot 2   # second key in the rotation pool
 
 **Storage**: macOS Keychain (preferred) → AES-GCM encrypted file (fallback)
 
+**External providers**: Keys can also live in 1Password, Doppler, or a plain environment variable — no local credential storage required. See [USAGE.md — `cst add-key`](USAGE.md#cst-add-key-profile---slot-n) for the `api_keys.toml` format.
+
+| Provider | Requirement | Reference format |
+|----------|-------------|-----------------|
+| Keychain | built-in | account name string |
+| 1Password | `op` CLI signed in | `op://vault/item/field` |
+| Doppler | `doppler` CLI configured | secret name, optional project/config |
+| Env var | variable exported in shell | `$VAR_NAME` |
+
 **Multi-key rotation**: Profile stores a pool of keys. On rate limit, tries next key before switching profiles.
 
 ## 3. AWS Bedrock

@@ -10,6 +10,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 #### Core library (`cst-core`)
+- **1Password / Doppler secret integration** — `auth/secrets.rs`: `SecretSource` enum supporting Keychain (default), `op read "op://..."` (1Password CLI), `doppler secrets get KEY` (Doppler CLI), and plain env var; `ApiKeyEntry.source` field replaces hardcoded keychain path; backwards-compatible with existing `api_keys.toml`; `add_external_key()` + `describe_sources()` helpers; 11 unit tests
+- **Team profile sharing** — `team_sync.rs`: `cst team init/push/pull/status`; clones git remote into local cache; `push()` copies only safe files (profile.toml, settings overrides, MCP config, env.toml, auto-switch.toml) and commits; `pull()` fetches + resets; credentials and stats never synced; include/exclude_profiles filter; 6 unit tests
 - **`.cstrc` auto-detect** — `auto_detect.rs`: walk directory tree for `.cstrc` (TOML), match `profile`/`session` fields; `[[auto_detect]]` entries with `git_remote_pattern` globs for git-URL-based selection; glob normalises SSH/HTTPS URLs automatically; 13 unit tests
 - **Live `history.jsonl` parser** — `history_parser.rs`: scan Claude Code's JSONL history for `usage` objects, sum `input_tokens`/`output_tokens`/cache fields; `estimated_cost_usd()` helper; gracefully skips invalid lines; 10 unit tests
 - **Round-robin config** — `RoundRobin` struct in `auto_switch/config.rs`: `[round_robin]` TOML section with `pool`, `rotate_after_tokens`, `enabled`; daemon can distribute usage across a pool of profiles to maximise uptime
@@ -24,8 +26,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Supports zsh, bash, fish
 
 #### Infrastructure
-- **`.github/workflows/release.yml`** — triggered on `v*` tags; builds `cst` for 4 targets (aarch64/x86_64 × macOS/Linux), uses `cross` for aarch64 Linux; creates GitHub Release with `.tar.gz` + `.sha256` artifacts; extracts release notes from `CHANGELOG.md`
-- 113 unit tests (up from 87)
+- **`.github/workflows/release.yml`** — builds `cst` for 5 targets (aarch64/x86_64 × macOS/Linux + Windows x86_64); `.zip` for Windows, `.tar.gz` for Unix; creates GitHub Release with checksums; extracts release notes from `CHANGELOG.md`
+- **Homebrew formula** — `Formula/claude-sentinel.rb`: selects binary by arch/OS, installs shell completions, caveats for first-run
+- **Raycast script commands** — `raycast/`: switch-profile, show-status, show-remaining, list-profiles (bash scripts, compact/fullOutput modes)
+- 130 unit tests (up from 87)
 
 #### Core library (`cst-core`)
 - **Profile management** — CRUD, clone, rename, import, templates (pro/max/api/bedrock/vertex)
