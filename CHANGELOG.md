@@ -29,6 +29,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **`.github/workflows/release.yml`** — builds `cst` for 5 targets (aarch64/x86_64 × macOS/Linux + Windows x86_64); `.zip` for Windows, `.tar.gz` for Unix; creates GitHub Release with checksums; extracts release notes from `CHANGELOG.md`
 - **Homebrew formula** — `Formula/claude-sentinel.rb`: selects binary by arch/OS, installs shell completions, caveats for first-run
 - **Raycast script commands** — `raycast/`: switch-profile, show-status, show-remaining, list-profiles (bash scripts, compact/fullOutput modes)
+- **60 CLI integration tests** — `crates/cst-cli/tests/cli_integration.rs`; build-and-run the `cst` binary against isolated `TempDir` environments; covers smoke, profile CRUD, session CRUD, auto-detect, doctor, settings, team-sync git roundtrip, starship/tmux; passes on macOS and Linux; gated with `CST_DATA_DIR` env-var isolation
+- **`CST_DATA_DIR` env-var override** — `platform::data_dir()` now checks `CST_DATA_DIR` first, redirecting the entire data layer for hermetic tests without touching `~/.claude-sentinel/`
+- **Docker test environments** — `docker/test/Dockerfile` (Ubuntu 22.04) + `Dockerfile.debian` (Bookworm); `scripts/test-docker.sh` runner
+- **`.github/workflows/integration.yml`** — new CI job: native matrix (Ubuntu, macOS, Windows) + Docker matrix (Ubuntu + Debian); triggers on push to main and PRs
 - 166 unit tests (up from 130) — deep test gap analysis and new test suites added
 
 ### Test Coverage Improvements

@@ -69,6 +69,11 @@
 - [x] cst-core: RoundRobin config section in AutoSwitchConfig
 - [x] 113 unit tests passing; binary runs correctly
 - [x] Test gap analysis: 36 new tests added across history_parser, auto_detect, auth/secrets, team_sync; 166 tests total
+- [x] CLI integration test suite: 60 tests in crates/cst-cli/tests/cli_integration.rs; isolated via CST_DATA_DIR env var; all passing on macOS and Linux
+- [x] Docker test environments: Dockerfile (Ubuntu 22.04) + Dockerfile.debian (Bookworm); scripts/test-docker.sh runner
+- [x] .github/workflows/integration.yml: native matrix (Ubuntu/macOS/Windows) + Docker matrix
+- [x] CST_DATA_DIR env-var override in platform::data_dir() for hermetic test isolation
+- [x] docs/INTEGRATION-TESTING.md: tiers, cross-platform matrix, manual runbook, known limits
   - Error paths: missing files, malformed TOML, truncated JSON
   - Security invariants: auth/ never synced (both to-repo and from-repo), describe() never leaks secrets
   - Edge cases: Windows CRLF, glob boundary cases, URL normalisation idempotency, env var with empty value

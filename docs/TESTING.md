@@ -155,12 +155,27 @@ fn missing_input_returns_err() {
 
 ---
 
+## Integration Tests
+
+`crates/cst-cli/tests/cli_integration.rs` — **60 integration tests** that build and invoke the `cst` binary against isolated temp directories (via `CST_DATA_DIR` env var override).
+
+See [INTEGRATION-TESTING.md](INTEGRATION-TESTING.md) for the full breakdown.
+
+```bash
+# Run all integration tests
+cargo test -p cst-cli --test cli_integration
+
+# Docker (Linux)
+./scripts/test-docker.sh
+```
+
 ## Known Test Gaps (Future Work)
 
 | Gap | Priority | Notes |
 |-----|----------|-------|
-| CLI integration tests (build binary, invoke `cst doctor`, `cst status`) | High | Requires building the release binary in CI and running it |
-| `team_sync` push/pull roundtrip against a local bare git repo | High | Tests the full git interaction path |
 | Property-based tests for `glob_match` / `normalise_git_url` | Medium | Idempotency, commutativity for exact strings |
 | Race condition tests for broadcast TTL expiry | Medium | Concurrent shell simulations |
-| Windows symlink fallback (junction / robocopy) | Low | Requires Windows CI runner |
+| `cst add-key` / keychain round-trip | Medium | Interactive stdin + OS keyring; needs manual runbook |
+| `cst login` / OAuth flow | High | Requires real Claude Code token; see manual runbook in INTEGRATION-TESTING.md |
+| Daemon start/stop/auto-switch under load | High | Long-running process; manual or scheduled CI |
+| Windows symlink fallback (junction) | Low | Requires Windows CI runner |

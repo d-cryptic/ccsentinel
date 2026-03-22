@@ -1,0 +1,73 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  integration:
+    name: Integration (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-integration-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdbus-1-dev pkg-config libssl-dev libsecret-1-dev
+
+      - name: Create minimal Claude Code stub
+        shell: bash
+        run: mkdir -p "$HOME/.claude"
+
+      - name: Build binary
+        run: cargo build -p cst-cli
+
+      - name: Run integration tests
+        run: cargo test -p cst-cli --test cli_integration -- --nocapture
+        env:
+          RUST_LOG: ""
+
+  docker-linux:
+    name: Docker (${{ matrix.distro }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu
+            dockerfile: docker/test/Dockerfile
+          - distro: debian
+            dockerfile: docker/test/Dockerfile.debian
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.distro }} test image
+        run: docker build -f ${{ matrix.dockerfile }} -t cst-test-${{ matrix.distro }} .
+
+      - name: Run ${{ matrix.distro }} integration tests
+        run: docker run --rm cst-test-${{ matrix.distro }}
