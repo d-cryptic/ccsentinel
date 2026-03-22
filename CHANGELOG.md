@@ -29,7 +29,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **`.github/workflows/release.yml`** — builds `cst` for 5 targets (aarch64/x86_64 × macOS/Linux + Windows x86_64); `.zip` for Windows, `.tar.gz` for Unix; creates GitHub Release with checksums; extracts release notes from `CHANGELOG.md`
 - **Homebrew formula** — `Formula/claude-sentinel.rb`: selects binary by arch/OS, installs shell completions, caveats for first-run
 - **Raycast script commands** — `raycast/`: switch-profile, show-status, show-remaining, list-profiles (bash scripts, compact/fullOutput modes)
-- 130 unit tests (up from 87)
+- 166 unit tests (up from 130) — deep test gap analysis and new test suites added
+
+### Test Coverage Improvements
+- **`history_parser` tests** (8 new): truncated JSON lines, Windows CRLF endings, both-fields double-count documentation, zero-value fields, cost proportionality, null usage fields, missing file error path
+- **`auto_detect` tests** (11 new): malformed TOML returns None, only-auto-detect entries with no git match, glob edge cases (empty pattern, star-only, middle star, empty segment), normalise idempotency, HTTP/SSH-scheme URL normalisation, find_cstrc in current dir
+- **`auth/secrets` tests** (8 new): describe() security invariant (shows reference not secret), Doppler describe with no project/config, env var empty-value success, check_tool_available for non-CLI providers, serde tag field verification, Doppler roundtrip with all options
+- **`team_sync` tests** (7 new): API key `.enc` file not copied, `copy_profile_from_repo` auth exclusion (defence against malicious repo), session stats.json excluded from sync, exclude-beats-include precedence, missing config file error, session sync file allowlist excludes history/stats, SYNC_FILES completeness and safety assertions
 
 #### Core library (`cst-core`)
 - **Profile management** — CRUD, clone, rename, import, templates (pro/max/api/bedrock/vertex)

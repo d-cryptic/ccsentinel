@@ -68,3 +68,8 @@
 - [x] cst remaining: prefers live history.jsonl counts over cached stats.json
 - [x] cst-core: RoundRobin config section in AutoSwitchConfig
 - [x] 113 unit tests passing; binary runs correctly
+- [x] Test gap analysis: 36 new tests added across history_parser, auto_detect, auth/secrets, team_sync; 166 tests total
+  - Error paths: missing files, malformed TOML, truncated JSON
+  - Security invariants: auth/ never synced (both to-repo and from-repo), describe() never leaks secrets
+  - Edge cases: Windows CRLF, glob boundary cases, URL normalisation idempotency, env var with empty value
+  - Behaviour documentation: both-fields double-count, null usage, zero tokens

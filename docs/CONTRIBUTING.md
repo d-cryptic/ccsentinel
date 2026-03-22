@@ -189,4 +189,5 @@ Tests run on both `ubuntu-latest` and `macos-latest`.
 - [AUTH.md](AUTH.md) -- authentication types and credential storage
 - [AUTO-SWITCH.md](AUTO-SWITCH.md) -- daemon configuration and rate-limit detection
 - [DESIGN.md](DESIGN.md) -- neubrutalism UI design system
+- [TESTING.md](TESTING.md) -- test structure, categories, security invariants, known gaps
 - [USAGE.md](USAGE.md) -- full CLI command reference
