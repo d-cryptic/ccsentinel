@@ -163,6 +163,26 @@ cst use work:backend
 cst use personal:default
 ```
 
+### `cst switch-all <from> <to>`
+
+Broadcast a profile switch to **every open shell** currently running profile `from`. Each shell picks it up at its next prompt via the `_cst_check_switch` precmd hook.
+
+```bash
+cst switch-all work personal
+# ✓ Broadcast queued: work → personal (expires in 5 min)
+# All shells on 'work' will switch at their next prompt
+
+# To also switch the current shell immediately:
+cst use personal
+```
+
+How it works:
+1. Writes `~/.claude-sentinel/broadcast-switch.json` with a 5-minute TTL and a unique ID
+2. Every shell's precmd hook calls `cst _broadcast-switch $CST_CURRENT $CST_BROADCAST_ID`
+3. If the shell's current profile matches `from` and the broadcast hasn't been applied yet, it gets the env exports
+4. Each shell tracks `CST_BROADCAST_ID` so it never applies the same broadcast twice
+5. The file expires after 5 minutes and is cleaned up automatically
+
 ### `cst run <profile:session> -- <cmd>`
 
 Run a command with a specific profile without changing the current shell state.
@@ -198,6 +218,22 @@ Update a session's description tag.
 ### `cst session archive <name>`
 
 Archive a session (hides from active list, keeps history).
+
+### `cst session switch <session> --to <profile>`
+
+Activate a specific session under a **different profile**. Creates the session in the target profile if it doesn't exist, then writes a pending-switch so the current shell picks it up.
+
+```bash
+# Run 'backend' session under api-backup's credentials instead of work's
+cst session switch backend --to api-backup
+# ✓ Created session 'backend' in profile 'api-backup'  (if new)
+# ✓ Session 'backend' switched: work → api-backup
+
+# Apply immediately in the current shell
+cst use api-backup:backend
+```
+
+Use case: you're on `work:backend` and hit a rate limit. Switch just the `backend` session to `api-backup:backend` to get different credentials, while other sessions stay on `work`.
 
 ## Switch History
 

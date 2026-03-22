@@ -2,14 +2,13 @@
 
 ## IN PROGRESS
 
-(nothing)
+- [ ] cst doctor: full health check implementation
+- [ ] cst remaining: real quota tracking from history.jsonl
 
 ## NEXT
 
 - [ ] CHANGELOG.md (auto-generate via git-cliff)
 - [ ] Homebrew tap formula
-- [ ] cst doctor: full health check implementation
-- [ ] cst remaining: real quota tracking from history.jsonl
 
 ## BACKLOG
 
@@ -61,4 +60,8 @@
 - [x] cst-cli: cst tmux — tmux status bar segment + --config
 - [x] .github/workflows/ci.yml — test + clippy + release build (ubuntu + macos)
 - [x] docs: USAGE.md, DESIGN.md, CONTRIBUTING.md, ARCHITECTURE.md updated
-- [x] 81 unit tests passing; binary runs correctly
+- [x] cst-core: broadcast.rs — BroadcastSwitch, check_broadcast (TTL-based, per-shell ID tracking)
+- [x] cst-cli: cst switch-all <from> <to> — broadcast switch to all open shells
+- [x] cst-cli: cst session switch <session> --to <profile> — per-session profile reassignment
+- [x] shell-init: precmd hook updated for broadcast check (zsh/bash/fish)
+- [x] 87 unit tests passing; binary runs correctly
