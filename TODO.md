@@ -2,14 +2,14 @@
 
 ## IN PROGRESS
 
-- [ ] cst-cli: cst top live real-time dashboard (ratatui)
+(nothing)
 
 ## NEXT
 
-- [ ] GitHub Actions CI (test + build on push)
-- [ ] cst starship module
-- [ ] cst tmux status segment
-- [ ] Update docs (USAGE.md, DESIGN.md, CONTRIBUTING.md, CHANGELOG.md)
+- [ ] CHANGELOG.md (auto-generate via git-cliff)
+- [ ] Homebrew tap formula
+- [ ] cst doctor: full health check implementation
+- [ ] cst remaining: real quota tracking from history.jsonl
 
 ## BACKLOG
 
@@ -56,4 +56,9 @@
 - [x] apps/desktop: Tauri v2 app — system tray, neubrutalism B&W design system
 - [x] apps/desktop: 4-tab window (Profiles, Sessions, Auto-Switch, Stats)
 - [x] apps/desktop: Zustand stores, ProfileManager, SessionGrid, StatsPanel
+- [x] cst-cli: cst top live real-time dashboard (htop-style, 1s refresh)
+- [x] cst-cli: cst starship — Starship prompt module + --config
+- [x] cst-cli: cst tmux — tmux status bar segment + --config
+- [x] .github/workflows/ci.yml — test + clippy + release build (ubuntu + macos)
+- [x] docs: USAGE.md, DESIGN.md, CONTRIBUTING.md, ARCHITECTURE.md updated
 - [x] 81 unit tests passing; binary runs correctly
