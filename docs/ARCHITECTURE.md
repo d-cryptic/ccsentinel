@@ -86,6 +86,71 @@ Three TOML/JSON layers, deep-merged in order (later wins):
 
 Result written to `…/sessions/{s}/.claude/settings.json` on each activate.
 
+## TUI Architecture
+
+`cst top` (live dashboard) and `cst` (interactive navigator) both use ratatui + crossterm.
+
+```
+cst top
+  │
+  ├── TopState::load() — initial data load
+  ├── run_loop() — 100ms poll loop, 1s refresh cycle
+  │     ├── terminal.draw(render) — ratatui frame
+  │     ├── crossterm event poll — keyboard (q, r)
+  │     └── state.refresh() — re-reads all profiles/stats/scheduler
+  │
+  └── render()
+        ├── render_header() — active profile, daemon status, spinner
+        ├── render_body() — profile/session table with token/cost columns
+        ├── render_scheduler() — active rate-limit countdown timers
+        ├── render_recent_events() — last 5 switch events
+        └── render_footer() — key hints
+
+cst (TUI navigator)
+  │
+  ├── AppState::load() — profiles, sessions, scheduler, history
+  ├── 4 tabs: Profiles | Sessions | Auto-Switch | History
+  ├── Enter → writes pending-switch + updates GlobalConfig
+  └── r → refresh all data
+```
+
+## Terminal Integrations
+
+### Starship
+`cst starship` outputs a single line: `🛡 profile:session` optionally followed by `⚠ Xh Ym` when a rate-limit timer is active. The shell runs this command each prompt draw via Starship's `custom.cst` module.
+
+### tmux
+`cst tmux` outputs a tmux-markup string with `#[fg=...]` colour codes showing the current profile:session. Added to `status-right` with `status-interval 5`.
+
+## Tauri Desktop App
+
+```
+apps/desktop/
+  src/
+    App.tsx               4-tab shell, status bar
+    styles/
+      neubrutalism.css    Design system (see docs/DESIGN.md)
+    components/
+      ProfileManager.tsx  Split-pane: profile list + detail
+      SessionGrid.tsx     Card grid, click-to-switch
+      AutoSwitchConfig.tsx  Daemon control, timers, switch log
+      StatsPanel.tsx      ASCII bar chart, token/cost tables
+    store/
+      profiles.ts         Zustand — profiles, active, CRUD
+      daemon.ts           Zustand — daemon status, switch log
+  src-tauri/
+    src/
+      main.rs             Tauri app entry point
+      tray.rs             System tray: left-click toggle, menu
+      commands/
+        profiles.rs       list/get/switch/create/delete
+        sessions.rs       list/create/delete
+        daemon.rs         status/start/stop/switch-log
+        stats.rs          aggregate stats across all sessions
+```
+
+The Tauri backend is a thin adapter: all logic delegates to `cst-core`. Tauri commands call the same functions used by `cst-cli`.
+
 ## Crate Dependencies
 
 ```
