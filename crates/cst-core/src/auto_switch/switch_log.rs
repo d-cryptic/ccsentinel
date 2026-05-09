@@ -88,8 +88,9 @@ impl SwitchLog {
             if line.trim().is_empty() {
                 continue;
             }
-            if let Ok(ev) = serde_json::from_str::<SwitchEvent>(&line) {
-                events.push(ev);
+            match serde_json::from_str::<SwitchEvent>(&line) {
+                Ok(ev) => events.push(ev),
+                Err(e) => tracing::debug!("skipping malformed switch-log line: {e}"),
             }
         }
         Ok(events)

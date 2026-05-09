@@ -210,7 +210,12 @@ impl ProfileManager {
         if let Ok(mut cfg) = crate::config::GlobalConfig::load() {
             if cfg.current_profile == old {
                 cfg.current_profile = new.to_string();
-                let _ = cfg.save();
+                if let Err(e) = cfg.save() {
+                    tracing::warn!(
+                        "renamed profile '{old}' → '{new}' on disk but failed to update \
+                         active profile pointer in config: {e}"
+                    );
+                }
             }
         }
         Ok(())

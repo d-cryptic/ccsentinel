@@ -156,18 +156,39 @@ fn normalise_git_url(url: &str) -> String {
     url.to_string()
 }
 
+/// Linear-time glob matching using a two-pointer DP approach.
+///
+/// The recursive version had exponential worst-case complexity: a pattern like
+/// "*a*a*a*" against "bbbbb" caused O(2^n) recursive calls. This iterative
+/// version tracks the last `*` position and is O(|p| * |v|) in the worst case,
+/// but O(|p| + |v|) for most inputs — safe against crafted `.cstrc` patterns.
 fn glob_chars(p: &[char], v: &[char]) -> bool {
-    match (p.first(), v.first()) {
-        (None, None) => true,
-        (Some('*'), _) => {
-            // * matches zero chars …
-            glob_chars(&p[1..], v)
-                // … or one more char
-                || (!v.is_empty() && glob_chars(p, &v[1..]))
+    let (mut pi, mut vi) = (0usize, 0usize);
+    let (mut star_pi, mut star_vi) = (usize::MAX, 0usize);
+
+    while vi < v.len() {
+        if pi < p.len() && p[pi] == '*' {
+            star_pi = pi;
+            star_vi = vi;
+            pi += 1;
+        } else if pi < p.len() && p[pi] == v[vi] {
+            pi += 1;
+            vi += 1;
+        } else if star_pi != usize::MAX {
+            // Backtrack: the star matches one more character
+            star_vi += 1;
+            vi = star_vi;
+            pi = star_pi + 1;
+        } else {
+            return false;
         }
-        (Some(pc), Some(vc)) if pc == vc => glob_chars(&p[1..], &v[1..]),
-        _ => false,
     }
+
+    // Consume trailing stars
+    while pi < p.len() && p[pi] == '*' {
+        pi += 1;
+    }
+    pi == p.len()
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────

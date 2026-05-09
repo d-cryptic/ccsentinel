@@ -89,11 +89,6 @@ pub fn global_config_path() -> PathBuf {
     data_dir().join("config.toml")
 }
 
-/// IPC socket / named pipe path for daemon communication.
-pub fn ipc_socket_path() -> PathBuf {
-    data_dir().join("daemon.sock")
-}
-
 /// Pending-switch file: daemon writes here, shell precmd reads and evals.
 pub fn pending_switch_path() -> PathBuf {
     data_dir().join("pending-switch")
