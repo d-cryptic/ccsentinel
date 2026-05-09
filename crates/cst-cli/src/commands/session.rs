@@ -37,6 +37,7 @@ pub fn list(profile: Option<&str>) -> Result<()> {
         Some(p) => p.to_string(),
         None => current_profile()?,
     };
+    validate_profile_name(&profile)?;
     let mgr = SessionManager::new(platform::profile_dir(&profile));
     let sessions = mgr.list()?;
     let current = GlobalConfig::load().unwrap_or_default();

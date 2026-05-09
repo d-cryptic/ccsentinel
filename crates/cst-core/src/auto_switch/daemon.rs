@@ -208,7 +208,9 @@ fn trigger_switch(
         as_cfg.estimate_minutes,
         as_cfg.auto_switch_back,
     );
-    let _ = scheduler.save();
+    if let Err(e) = scheduler.save() {
+        tracing::warn!("failed to persist scheduler state after rate-limit event — auto-switch-back may not fire: {e}");
+    }
 
     // Write pending-switch for shell precmd hook
     write_pending_switch(&target_profile, "default")?;

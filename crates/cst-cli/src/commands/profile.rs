@@ -39,7 +39,7 @@ pub async fn new(name: &str, auth: &str, template: Option<&str>) -> Result<()> {
 pub fn import(alias: Option<&str>) -> Result<()> {
     let name = alias.unwrap_or("imported");
     let mgr = ProfileManager::default();
-    let _ = mgr.create(name, cst_core::profile::AuthType::OAuth)?;
+    mgr.create(name, cst_core::profile::AuthType::OAuth)?;
     let auth_dir = platform::profile_dir(name).join("auth");
     oauth::import_current(&auth_dir)?;
 
@@ -71,6 +71,7 @@ pub fn rename(old: &str, new: &str) -> Result<()> {
 
 pub async fn login(profile: Option<&str>) -> Result<()> {
     let name = profile.unwrap_or("default");
+    cst_core::profile::validate_profile_name(name)?;
     println!("Starting OAuth login for profile '{name}'...");
     // Activate the profile's CLAUDE_CONFIG_DIR, then run `claude /login`
     let config_dir = platform::claude_config_dir(name, "default");

@@ -110,6 +110,7 @@ impl SessionManager {
     }
 
     pub fn delete(&self, name: &str) -> Result<()> {
+        validate_session_name(name)?;
         if name == "default" {
             bail!("cannot delete the 'default' session");
         }
@@ -122,6 +123,7 @@ impl SessionManager {
     }
 
     pub fn archive(&self, name: &str) -> Result<()> {
+        validate_session_name(name)?;
         let dir = self.session_dir(name);
         let mut session = Session::load(&dir)?;
         session.archived = true;
@@ -130,6 +132,7 @@ impl SessionManager {
     }
 
     pub fn tag(&self, name: &str, description: &str) -> Result<()> {
+        validate_session_name(name)?;
         let dir = self.session_dir(name);
         let mut session = Session::load(&dir)?;
         session.description = description.to_string();
@@ -138,6 +141,7 @@ impl SessionManager {
     }
 
     pub fn mark_used(&self, name: &str) -> Result<()> {
+        validate_session_name(name)?;
         let dir = self.session_dir(name);
         let mut session = Session::load(&dir)?;
         session.last_used = Some(Utc::now());
