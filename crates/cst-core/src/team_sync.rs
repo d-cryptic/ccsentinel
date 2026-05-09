@@ -360,7 +360,15 @@ fn copy_profile_to_repo(name: &str, profiles_dir: &Path, repo: &Path) -> Result<
     for file in SYNC_FILES {
         let s = src.join(file);
         if s.exists() {
-            std::fs::copy(&s, dst.join(file))?;
+            if *file == "profile.toml" {
+                // Strip [hooks] before syncing: hook commands are local shell scripts
+                // and should never be distributed to team members via git.
+                // A malicious remote with hook commands would execute arbitrary shell
+                // on the next `cst use <profile>` by anyone who pulls.
+                copy_profile_toml_without_hooks(&s, &dst.join(file))?;
+            } else {
+                std::fs::copy(&s, dst.join(file))?;
+            }
         }
     }
 
@@ -389,6 +397,28 @@ fn copy_profile_to_repo(name: &str, profiles_dir: &Path, repo: &Path) -> Result<
     Ok(())
 }
 
+/// Write `profile.toml` to the sync repo with the `[hooks]` section removed.
+///
+/// Hook commands are local shell scripts and must never be distributed to team
+/// members — a malicious remote with hook content would execute arbitrary shell
+/// on the next `cst use <profile>` for any team member who pulls.
+///
+/// Uses TOML value-level manipulation to preserve all other fields without
+/// requiring the file to match the full Profile schema.
+fn copy_profile_toml_without_hooks(src: &Path, dst: &Path) -> Result<()> {
+    use anyhow::Context as _;
+    let contents = std::fs::read_to_string(src)
+        .with_context(|| format!("reading {}", src.display()))?;
+    let mut value: toml::Value = toml::from_str(&contents)
+        .with_context(|| format!("parsing {}", src.display()))?;
+    // Remove the [hooks] table if present
+    if let toml::Value::Table(ref mut tbl) = value {
+        tbl.remove("hooks");
+    }
+    std::fs::write(dst, toml::to_string_pretty(&value)?)?;
+    Ok(())
+}
+
 fn copy_profile_from_repo(src: &Path, dst: &Path) -> Result<()> {
     copy_profile_from_repo_with_strategy(src, dst, &MergeStrategy::Theirs)
 }
@@ -412,7 +442,14 @@ fn copy_profile_from_repo_with_strategy(
     if sessions_src.exists() {
         for entry in std::fs::read_dir(&sessions_src)? {
             let entry = entry?;
-            let sdst = dst.join("sessions").join(entry.file_name());
+            let sname = entry.file_name().to_string_lossy().to_string();
+            // Reject traversal attempts — a remote repo session named
+            // "../../etc/cron.d/pwn" would otherwise write outside the data dir.
+            if let Err(e) = crate::session::validate_session_name(&sname) {
+                tracing::warn!("skipping remote session {sname:?} during pull: {e}");
+                continue;
+            }
+            let sdst = dst.join("sessions").join(&sname);
             std::fs::create_dir_all(&sdst)?;
             for file in SESSION_SYNC_FILES {
                 let sf = entry.path().join(file);
@@ -660,6 +697,38 @@ mod tests {
         // auth/ directory must not exist in the repo copy
         assert!(!repo_profile.join("auth").exists());
         assert!(!repo_profile.join("auth").join("api_key.enc").exists());
+    }
+
+    #[test]
+    fn copy_profile_to_repo_strips_hooks_from_profile_toml() {
+        let src_root = TempDir::new().unwrap();
+        let repo_root = TempDir::new().unwrap();
+        let profile_src = src_root.path().join("work");
+        std::fs::create_dir_all(&profile_src).unwrap();
+        // profile.toml with a dangerous hook
+        std::fs::write(
+            profile_src.join("profile.toml"),
+            "[hooks]\npre_switch_in = \"rm -rf /tmp/evil\"\n\nname = \"work\"\n",
+        )
+        .unwrap();
+
+        copy_profile_to_repo("work", src_root.path(), repo_root.path()).unwrap();
+
+        let synced = repo_root
+            .path()
+            .join("profiles")
+            .join("work")
+            .join("profile.toml");
+        let contents = std::fs::read_to_string(synced).unwrap();
+        // Hooks section must be absent from the synced copy
+        assert!(
+            !contents.contains("pre_switch_in"),
+            "hook command must not be synced: {contents}"
+        );
+        assert!(
+            !contents.contains("rm -rf"),
+            "hook payload must not be synced: {contents}"
+        );
     }
 
     #[test]
