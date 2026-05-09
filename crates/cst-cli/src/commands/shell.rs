@@ -1,8 +1,8 @@
 use anyhow::Result;
-use cst_core::shell::{env_exports, parse_profile_session, shell_init_code, ShellKind};
-use cst_core::{platform, merge};
 use cst_core::env_overlay::EnvOverlay;
 use cst_core::profile::Profile;
+use cst_core::shell::{env_exports, parse_profile_session, shell_init_code, ShellKind};
+use cst_core::{merge, platform};
 use std::collections::HashMap;
 
 pub fn shell_init(shell_arg: Option<String>) -> Result<()> {
@@ -27,8 +27,14 @@ pub fn env_cmd(profile_session: &str) -> Result<()> {
 
     // Build env vars to export
     let mut vars: HashMap<String, String> = HashMap::new();
-    vars.insert("CLAUDE_CONFIG_DIR".to_string(), claude_config_dir.to_string_lossy().to_string());
-    vars.insert("CST_CURRENT".to_string(), format!("{}:{}", profile, session));
+    vars.insert(
+        "CLAUDE_CONFIG_DIR".to_string(),
+        claude_config_dir.to_string_lossy().to_string(),
+    );
+    vars.insert(
+        "CST_CURRENT".to_string(),
+        format!("{}:{}", profile, session),
+    );
 
     // Load profile to determine auth type and inject auth-specific vars
     // (best-effort — if profile doesn't exist yet, just export CLAUDE_CONFIG_DIR)
@@ -66,7 +72,8 @@ pub fn env_cmd(profile_session: &str) -> Result<()> {
                     let bedrock_path = profile_dir.join("auth").join("aws.toml");
                     if bedrock_path.exists() {
                         let contents = std::fs::read_to_string(&bedrock_path)?;
-                        let cfg: cst_core::auth::bedrock::BedrockConfig = toml::from_str(&contents)?;
+                        let cfg: cst_core::auth::bedrock::BedrockConfig =
+                            toml::from_str(&contents)?;
                         if let Ok(evars) = cfg.env_vars() {
                             vars.extend(evars);
                         }
@@ -103,7 +110,12 @@ pub fn env_cmd(profile_session: &str) -> Result<()> {
         let profile_override = profile_dir.join("settings-override.json");
         let session_override = session_dir.join("settings-override.json");
         let output = platform::claude_config_dir(&profile, &session).join("settings.json");
-        let _ = merge::merge_and_write(&global_settings, &profile_override, &session_override, &output);
+        let _ = merge::merge_and_write(
+            &global_settings,
+            &profile_override,
+            &session_override,
+            &output,
+        );
     }
 
     // Update global config

@@ -64,7 +64,9 @@ impl BedrockConfig {
 
 fn retrieve_from_keychain(account: &str) -> anyhow::Result<String> {
     let entry = keyring::Entry::new("claude-sentinel", account)?;
-    entry.get_password().map_err(|e| anyhow::anyhow!("retrieving AWS key '{account}': {e}"))
+    entry
+        .get_password()
+        .map_err(|e| anyhow::anyhow!("retrieving AWS key '{account}': {e}"))
 }
 
 #[cfg(test)]
@@ -97,6 +99,9 @@ mod tests {
         // by calling with no accounts set
         let vars = cfg.env_vars().unwrap();
         assert_eq!(vars["AWS_DEFAULT_REGION"], "us-west-2");
-        assert_eq!(vars["ANTHROPIC_MODEL"], "anthropic.claude-3-5-sonnet-20241022-v2:0");
+        assert_eq!(
+            vars["ANTHROPIC_MODEL"],
+            "anthropic.claude-3-5-sonnet-20241022-v2:0"
+        );
     }
 }

@@ -60,13 +60,27 @@ mod tests {
     fn test_save_and_load_roundtrip() {
         let dir = TempDir::new().unwrap();
         let mut overlay = EnvOverlay::default();
-        overlay.env.insert("PROJECT_ENV".to_string(), "staging".to_string());
-        overlay.env.insert("CLAUDE_CODE_MAX_OUTPUT_TOKENS".to_string(), "32000".to_string());
+        overlay
+            .env
+            .insert("PROJECT_ENV".to_string(), "staging".to_string());
+        overlay.env.insert(
+            "CLAUDE_CODE_MAX_OUTPUT_TOKENS".to_string(),
+            "32000".to_string(),
+        );
         overlay.save(dir.path()).unwrap();
 
         let loaded = EnvOverlay::load(dir.path()).unwrap();
-        assert_eq!(loaded.env.get("PROJECT_ENV").map(String::as_str), Some("staging"));
-        assert_eq!(loaded.env.get("CLAUDE_CODE_MAX_OUTPUT_TOKENS").map(String::as_str), Some("32000"));
+        assert_eq!(
+            loaded.env.get("PROJECT_ENV").map(String::as_str),
+            Some("staging")
+        );
+        assert_eq!(
+            loaded
+                .env
+                .get("CLAUDE_CODE_MAX_OUTPUT_TOKENS")
+                .map(String::as_str),
+            Some("32000")
+        );
     }
 
     #[test]

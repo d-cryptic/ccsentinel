@@ -58,8 +58,12 @@ pub struct RoundRobin {
     pub rotate_after_tokens: u64,
 }
 
-fn default_estimate_minutes() -> u64 { 300 }
-fn default_true() -> bool { true }
+fn default_estimate_minutes() -> u64 {
+    300
+}
+fn default_true() -> bool {
+    true
+}
 
 /// Time-based switching schedule.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,7 +77,9 @@ pub struct Schedule {
     pub fallback: String,
 }
 
-fn default_utc() -> String { "UTC".to_string() }
+fn default_utc() -> String {
+    "UTC".to_string()
+}
 
 impl Default for AutoSwitchConfig {
     fn default() -> Self {

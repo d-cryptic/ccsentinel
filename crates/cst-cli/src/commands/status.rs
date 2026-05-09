@@ -1,6 +1,6 @@
 use anyhow::Result;
-use cst_core::GlobalConfig;
 use cst_core::platform;
+use cst_core::GlobalConfig;
 
 pub fn run() -> Result<()> {
     let cfg = GlobalConfig::load()?;
@@ -20,6 +20,9 @@ pub fn run() -> Result<()> {
     println!("Profile : {}", cfg.current_profile);
     println!("Session : {}", cfg.current_session);
     println!("Auth    : {auth_type}");
-    println!("Config  : {}", platform::claude_config_dir(&cfg.current_profile, &cfg.current_session).display());
+    println!(
+        "Config  : {}",
+        platform::claude_config_dir(&cfg.current_profile, &cfg.current_session).display()
+    );
     Ok(())
 }

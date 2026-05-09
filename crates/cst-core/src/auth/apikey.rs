@@ -18,7 +18,10 @@ pub struct ApiKeyEntry {
     /// Where to retrieve this key from.
     ///
     /// Defaults to `SecretSource::Keychain` when absent (legacy format).
-    #[serde(default = "default_keychain_source", skip_serializing_if = "is_default_keychain")]
+    #[serde(
+        default = "default_keychain_source",
+        skip_serializing_if = "is_default_keychain"
+    )]
     pub source: SecretSource,
     /// Keychain account name (kept for backwards-compatibility; used when
     /// `source` is `Keychain`).
@@ -30,7 +33,9 @@ pub struct ApiKeyEntry {
 }
 
 fn default_keychain_source() -> SecretSource {
-    SecretSource::Keychain { account: String::new() }
+    SecretSource::Keychain {
+        account: String::new(),
+    }
 }
 
 fn is_default_keychain(s: &SecretSource) -> bool {
@@ -45,14 +50,22 @@ pub struct ApiKeyPool {
 
 impl ApiKeyPool {
     /// Store a new API key in the OS Keychain and add it to the pool.
-    pub fn add_key(&mut self, profile_name: &str, slot: u8, api_key: &str, note: &str) -> Result<()> {
+    pub fn add_key(
+        &mut self,
+        profile_name: &str,
+        slot: u8,
+        api_key: &str,
+        note: &str,
+    ) -> Result<()> {
         let account = format!("{profile_name}-slot{slot}");
         store_in_keychain(&account, api_key)?;
         // Remove existing entry for this slot if any
         self.keys.retain(|k| k.slot != slot);
         self.keys.push(ApiKeyEntry {
             slot,
-            source: SecretSource::Keychain { account: account.clone() },
+            source: SecretSource::Keychain {
+                account: account.clone(),
+            },
             keychain_account: account,
             note: note.to_string(),
         });
@@ -79,7 +92,10 @@ impl ApiKeyPool {
 
     /// Remove a key slot.
     pub fn remove_key(&mut self, slot: u8) -> Result<()> {
-        let entry = self.keys.iter().find(|k| k.slot == slot)
+        let entry = self
+            .keys
+            .iter()
+            .find(|k| k.slot == slot)
             .ok_or_else(|| anyhow::anyhow!("slot {slot} not found"))?;
         delete_from_keychain(&entry.keychain_account)?;
         self.keys.retain(|k| k.slot != slot);
@@ -88,13 +104,20 @@ impl ApiKeyPool {
 
     /// Retrieve the API key for a given slot from its configured provider.
     pub fn retrieve_key(&self, slot: u8) -> Result<String> {
-        let entry = self.keys.iter().find(|k| k.slot == slot)
+        let entry = self
+            .keys
+            .iter()
+            .find(|k| k.slot == slot)
             .ok_or_else(|| anyhow::anyhow!("slot {slot} not found in key pool"))?;
         // Use the source if it carries a real account; otherwise fall back
         // to legacy keychain_account field.
         match &entry.source {
             SecretSource::Keychain { account } => {
-                let acct = if account.is_empty() { &entry.keychain_account } else { account };
+                let acct = if account.is_empty() {
+                    &entry.keychain_account
+                } else {
+                    account
+                };
                 retrieve_from_keychain(acct)
             }
             other => other.retrieve(),
@@ -111,7 +134,10 @@ impl ApiKeyPool {
 
     /// Describe the source for each slot (for `cst validate` output).
     pub fn describe_sources(&self) -> Vec<(u8, String)> {
-        self.keys.iter().map(|k| (k.slot, k.source.describe())).collect()
+        self.keys
+            .iter()
+            .map(|k| (k.slot, k.source.describe()))
+            .collect()
     }
 
     /// Return slots sorted by priority.
@@ -127,23 +153,22 @@ impl ApiKeyPool {
 }
 
 fn store_in_keychain(account: &str, secret: &str) -> Result<()> {
-    let entry = keyring::Entry::new(SERVICE_NAME, account)
-        .context("creating keychain entry")?;
-    entry.set_password(secret)
+    let entry = keyring::Entry::new(SERVICE_NAME, account).context("creating keychain entry")?;
+    entry
+        .set_password(secret)
         .context("storing key in keychain")?;
     Ok(())
 }
 
 fn retrieve_from_keychain(account: &str) -> Result<String> {
-    let entry = keyring::Entry::new(SERVICE_NAME, account)
-        .context("creating keychain entry")?;
-    entry.get_password()
+    let entry = keyring::Entry::new(SERVICE_NAME, account).context("creating keychain entry")?;
+    entry
+        .get_password()
         .context("retrieving key from keychain — run `cst add-key` to add credentials")
 }
 
 fn delete_from_keychain(account: &str) -> Result<()> {
-    let entry = keyring::Entry::new(SERVICE_NAME, account)
-        .context("creating keychain entry")?;
+    let entry = keyring::Entry::new(SERVICE_NAME, account).context("creating keychain entry")?;
     // Ignore error if entry doesn't exist
     let _ = entry.delete_credential();
     Ok(())
@@ -156,7 +181,9 @@ mod tests {
     fn make_entry(slot: u8, account: &str) -> ApiKeyEntry {
         ApiKeyEntry {
             slot,
-            source: super::SecretSource::Keychain { account: account.to_string() },
+            source: super::SecretSource::Keychain {
+                account: account.to_string(),
+            },
             keychain_account: account.to_string(),
             note: String::new(),
         }

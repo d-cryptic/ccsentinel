@@ -27,7 +27,10 @@ pub fn run(from: &str, to: &str) -> Result<()> {
 
     println!("✓ Broadcast switch queued: {from} → {to}");
     println!("  ID        : {}", broadcast.id);
-    println!("  Expires   : {} (5 min)", broadcast.expires_at.format("%H:%M:%S"));
+    println!(
+        "  Expires   : {} (5 min)",
+        broadcast.expires_at.format("%H:%M:%S")
+    );
     println!();
     println!("  All open shells running profile '{from}' will switch to '{to}'");
     println!("  at their next shell prompt (precmd hook).");
@@ -93,9 +96,7 @@ fn inject_auth_vars(
         cst_core::profile::AuthType::Api => {
             let keys_path = profile_dir.join("auth").join("api_keys.toml");
             if let Ok(contents) = std::fs::read_to_string(&keys_path) {
-                if let Ok(pool) =
-                    toml::from_str::<cst_core::auth::apikey::ApiKeyPool>(&contents)
-                {
+                if let Ok(pool) = toml::from_str::<cst_core::auth::apikey::ApiKeyPool>(&contents) {
                     if let Some(&slot) = pool.sorted_slots().first() {
                         if let Ok(evars) = pool.env_vars_for_slot(slot) {
                             vars.extend(evars);
@@ -119,9 +120,7 @@ fn inject_auth_vars(
         cst_core::profile::AuthType::Vertex => {
             let vertex_path = profile_dir.join("auth").join("vertex.toml");
             if let Ok(contents) = std::fs::read_to_string(&vertex_path) {
-                if let Ok(cfg) =
-                    toml::from_str::<cst_core::auth::vertex::VertexConfig>(&contents)
-                {
+                if let Ok(cfg) = toml::from_str::<cst_core::auth::vertex::VertexConfig>(&contents) {
                     if let Ok(evars) = cfg.env_vars() {
                         vars.extend(evars);
                     }

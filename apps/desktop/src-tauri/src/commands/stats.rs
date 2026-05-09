@@ -21,14 +21,19 @@ pub struct StatsDto {
 }
 
 #[tauri::command]
-pub fn get_stats(profile: Option<String>, session: Option<String>) -> Result<Vec<StatsDto>, String> {
+pub fn get_stats(
+    profile: Option<String>,
+    session: Option<String>,
+) -> Result<Vec<StatsDto>, String> {
     let mgr = ProfileManager::new(platform::profiles_dir());
     let profiles = mgr.list().map_err(|e| e.to_string())?;
     let mut result = Vec::new();
 
     for p in &profiles {
         if let Some(ref filter_p) = profile {
-            if &p.name != filter_p { continue; }
+            if &p.name != filter_p {
+                continue;
+            }
         }
         let profile_dir = platform::profile_dir(&p.name);
         let smgr = SessionManager::new(profile_dir.join("sessions"));
@@ -36,7 +41,9 @@ pub fn get_stats(profile: Option<String>, session: Option<String>) -> Result<Vec
 
         for s in &sessions {
             if let Some(ref filter_s) = session {
-                if &s.name != filter_s { continue; }
+                if &s.name != filter_s {
+                    continue;
+                }
             }
             let session_dir = profile_dir.join("sessions").join(&s.name);
             let stats = SessionStats::load(&session_dir).unwrap_or_default();

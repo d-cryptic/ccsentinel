@@ -23,20 +23,27 @@ pub fn list_profiles() -> Result<Vec<ProfileDto>, String> {
     let cfg = GlobalConfig::load().unwrap_or_default();
     let profiles = mgr.list().map_err(|e| e.to_string())?;
 
-    Ok(profiles.into_iter().map(|p| {
-        let profile_dir = platform::profile_dir(&p.name);
-        let smgr = cst_core::session::SessionManager::new(profile_dir.join("sessions"));
-        let sessions = smgr.list().unwrap_or_default()
-            .into_iter().map(|s| s.name).collect();
-        ProfileDto {
-            is_active: p.name == cfg.current_profile,
-            name: p.name,
-            auth_type: p.auth_type.to_string(),
-            description: p.description,
-            sessions,
-            color: p.color,
-        }
-    }).collect())
+    Ok(profiles
+        .into_iter()
+        .map(|p| {
+            let profile_dir = platform::profile_dir(&p.name);
+            let smgr = cst_core::session::SessionManager::new(profile_dir.join("sessions"));
+            let sessions = smgr
+                .list()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|s| s.name)
+                .collect();
+            ProfileDto {
+                is_active: p.name == cfg.current_profile,
+                name: p.name,
+                auth_type: p.auth_type.to_string(),
+                description: p.description,
+                sessions,
+                color: p.color,
+            }
+        })
+        .collect())
 }
 
 #[tauri::command]
@@ -63,7 +70,11 @@ pub fn switch_profile(profile: String, session: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn create_profile(name: String, auth_type: String, template: Option<String>) -> Result<ProfileDto, String> {
+pub fn create_profile(
+    name: String,
+    auth_type: String,
+    template: Option<String>,
+) -> Result<ProfileDto, String> {
     let at = AuthType::from_str(&auth_type).map_err(|e| e.to_string())?;
     let mgr = ProfileManager::new(platform::profiles_dir());
     let profile = mgr.create(&name, at).map_err(|e| e.to_string())?;
@@ -72,7 +83,10 @@ pub fn create_profile(name: String, auth_type: String, template: Option<String>)
     if let Some(tpl_name) = template {
         if let Some(tpl) = cst_core::templates::find(&tpl_name) {
             let override_path = platform::profile_dir(&name).join("settings-override.json");
-            let _ = std::fs::write(override_path, serde_json::to_string_pretty(&tpl.settings_override).unwrap());
+            let _ = std::fs::write(
+                override_path,
+                serde_json::to_string_pretty(&tpl.settings_override).unwrap(),
+            );
         }
     }
 

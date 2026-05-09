@@ -50,10 +50,7 @@ fn find_history_files() -> Vec<PathBuf> {
             let sessions_dir = entry.path().join("sessions");
             if let Ok(sessions) = std::fs::read_dir(&sessions_dir) {
                 for s_entry in sessions.flatten() {
-                    let history = s_entry
-                        .path()
-                        .join(".claude")
-                        .join("history.jsonl");
+                    let history = s_entry.path().join(".claude").join("history.jsonl");
                     if history.exists() {
                         files.push(history);
                     }
@@ -86,7 +83,9 @@ pub async fn run_daemon() -> Result<()> {
 
     let (tx, rx) = mpsc::channel();
     let mut watcher = RecommendedWatcher::new(
-        move |res| { let _ = tx.send(res); },
+        move |res| {
+            let _ = tx.send(res);
+        },
         NotifyConfig::default().with_poll_interval(Duration::from_secs(2)),
     )?;
 
@@ -176,7 +175,9 @@ fn trigger_switch(
     }
 
     // Pick next profile in chain (skip if it's the current one)
-    let target = as_cfg.fallback_chain.iter()
+    let target = as_cfg
+        .fallback_chain
+        .iter()
         .find(|p| p.as_str() != current_profile)
         .cloned();
 
@@ -186,7 +187,11 @@ fn trigger_switch(
     };
 
     // Record rate limit in scheduler for future switch-back
-    scheduler.record_rate_limit(&current_profile, as_cfg.estimate_minutes, as_cfg.auto_switch_back);
+    scheduler.record_rate_limit(
+        &current_profile,
+        as_cfg.estimate_minutes,
+        as_cfg.auto_switch_back,
+    );
     let _ = scheduler.save();
 
     // Write pending-switch for shell precmd hook
@@ -275,8 +280,12 @@ pub fn is_running() -> bool {
     if !path.exists() {
         return false;
     }
-    let Ok(pid_str) = std::fs::read_to_string(&path) else { return false; };
-    let Ok(pid) = pid_str.trim().parse::<u32>() else { return false; };
+    let Ok(pid_str) = std::fs::read_to_string(&path) else {
+        return false;
+    };
+    let Ok(pid) = pid_str.trim().parse::<u32>() else {
+        return false;
+    };
     // Check if process exists
     #[cfg(unix)]
     {

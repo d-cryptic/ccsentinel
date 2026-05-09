@@ -57,7 +57,9 @@ pub struct SwitchLog {
 
 impl SwitchLog {
     pub fn open() -> Self {
-        Self { path: platform::data_dir().join("switch-log.jsonl") }
+        Self {
+            path: platform::data_dir().join("switch-log.jsonl"),
+        }
     }
 
     /// Append one event to the log.
@@ -83,7 +85,9 @@ impl SwitchLog {
         let mut events = Vec::new();
         for line in reader.lines() {
             let line = line?;
-            if line.trim().is_empty() { continue; }
+            if line.trim().is_empty() {
+                continue;
+            }
             if let Ok(ev) = serde_json::from_str::<SwitchEvent>(&line) {
                 events.push(ev);
             }
@@ -94,7 +98,14 @@ impl SwitchLog {
     /// Return the last N events.
     pub fn last_n(&self, n: usize) -> Result<Vec<SwitchEvent>> {
         let all = self.read_all()?;
-        Ok(all.into_iter().rev().take(n).collect::<Vec<_>>().into_iter().rev().collect())
+        Ok(all
+            .into_iter()
+            .rev()
+            .take(n)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect())
     }
 }
 
@@ -118,9 +129,13 @@ mod tests {
     #[test]
     fn test_append_and_read_roundtrip() {
         let dir = TempDir::new().unwrap();
-        let log = SwitchLog { path: dir.path().join("switch-log.jsonl") };
-        log.append(&make_event("work", "personal", SwitchReason::RateLimit)).unwrap();
-        log.append(&make_event("personal", "work", SwitchReason::QuotaRefill)).unwrap();
+        let log = SwitchLog {
+            path: dir.path().join("switch-log.jsonl"),
+        };
+        log.append(&make_event("work", "personal", SwitchReason::RateLimit))
+            .unwrap();
+        log.append(&make_event("personal", "work", SwitchReason::QuotaRefill))
+            .unwrap();
 
         let events = log.read_all().unwrap();
         assert_eq!(events.len(), 2);
@@ -132,16 +147,25 @@ mod tests {
     #[test]
     fn test_read_empty_log() {
         let dir = TempDir::new().unwrap();
-        let log = SwitchLog { path: dir.path().join("switch-log.jsonl") };
+        let log = SwitchLog {
+            path: dir.path().join("switch-log.jsonl"),
+        };
         assert!(log.read_all().unwrap().is_empty());
     }
 
     #[test]
     fn test_last_n() {
         let dir = TempDir::new().unwrap();
-        let log = SwitchLog { path: dir.path().join("switch-log.jsonl") };
+        let log = SwitchLog {
+            path: dir.path().join("switch-log.jsonl"),
+        };
         for i in 0..5 {
-            log.append(&make_event(&format!("p{i}"), "personal", SwitchReason::Manual)).unwrap();
+            log.append(&make_event(
+                &format!("p{i}"),
+                "personal",
+                SwitchReason::Manual,
+            ))
+            .unwrap();
         }
         let last2 = log.last_n(2).unwrap();
         assert_eq!(last2.len(), 2);

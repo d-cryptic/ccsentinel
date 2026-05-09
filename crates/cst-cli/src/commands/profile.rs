@@ -1,7 +1,7 @@
 use anyhow::Result;
-use cst_core::profile::{AuthType, ProfileManager};
 use cst_core::auth::oauth;
 use cst_core::platform;
+use cst_core::profile::{AuthType, ProfileManager};
 use std::str::FromStr;
 
 pub async fn new(name: &str, auth: &str, template: Option<&str>) -> Result<()> {
@@ -14,7 +14,10 @@ pub async fn new(name: &str, auth: &str, template: Option<&str>) -> Result<()> {
     if let Some(tmpl_name) = template {
         if let Some(tmpl) = cst_core::templates::find(tmpl_name) {
             let override_path = platform::profile_dir(name).join("settings-override.json");
-            std::fs::write(&override_path, serde_json::to_string_pretty(&tmpl.settings_override)?)?;
+            std::fs::write(
+                &override_path,
+                serde_json::to_string_pretty(&tmpl.settings_override)?,
+            )?;
             println!("✓ Applied template '{tmpl_name}'");
         } else {
             eprintln!("⚠ Template '{tmpl_name}' not found. Run: cst templates");
@@ -88,11 +91,18 @@ pub async fn login(profile: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-pub fn add_key(profile: &str, slot: u8, source_flag: Option<&str>, note: Option<&str>) -> Result<()> {
+pub fn add_key(
+    profile: &str,
+    slot: u8,
+    source_flag: Option<&str>,
+    note: Option<&str>,
+) -> Result<()> {
     use cst_core::auth::apikey::ApiKeyPool;
     use cst_core::auth::secrets::SecretSource;
 
-    let keys_path = platform::profile_dir(profile).join("auth").join("api_keys.toml");
+    let keys_path = platform::profile_dir(profile)
+        .join("auth")
+        .join("api_keys.toml");
     std::fs::create_dir_all(keys_path.parent().unwrap())?;
     let mut pool: ApiKeyPool = if keys_path.exists() {
         let c = std::fs::read_to_string(&keys_path)?;
@@ -125,7 +135,11 @@ pub fn add_key(profile: &str, slot: u8, source_flag: Option<&str>, note: Option<
     std::io::stdout().flush()?;
 
     let choice = read_line()?.trim().to_string();
-    let choice = if choice.is_empty() { "1".to_string() } else { choice };
+    let choice = if choice.is_empty() {
+        "1".to_string()
+    } else {
+        choice
+    };
 
     match choice.as_str() {
         "1" | "keychain" => {
@@ -162,14 +176,26 @@ pub fn add_key(profile: &str, slot: u8, source_flag: Option<&str>, note: Option<
             print!("Doppler project (optional, press Enter to use default): ");
             std::io::stdout().flush()?;
             let project_input = read_line()?.trim().to_string();
-            let project = if project_input.is_empty() { None } else { Some(project_input) };
+            let project = if project_input.is_empty() {
+                None
+            } else {
+                Some(project_input)
+            };
 
             print!("Doppler config (optional, press Enter to use default): ");
             std::io::stdout().flush()?;
             let config_input = read_line()?.trim().to_string();
-            let config = if config_input.is_empty() { None } else { Some(config_input) };
+            let config = if config_input.is_empty() {
+                None
+            } else {
+                Some(config_input)
+            };
 
-            let src = SecretSource::Doppler { secret_name, project, config };
+            let src = SecretSource::Doppler {
+                secret_name,
+                project,
+                config,
+            };
             src.check_tool_available()?;
             pool.add_external_key(slot, src, note_str)?;
             std::fs::write(&keys_path, toml::to_string_pretty(&pool)?)?;
@@ -206,17 +232,27 @@ fn parse_source_flag(src: &str) -> Result<cst_core::auth::secrets::SecretSource>
     use cst_core::auth::secrets::SecretSource;
 
     if src.starts_with("op://") {
-        return Ok(SecretSource::OnePassword { reference: src.to_string() });
+        return Ok(SecretSource::OnePassword {
+            reference: src.to_string(),
+        });
     }
     if src.starts_with("doppler:") {
         let name = src.trim_start_matches("doppler:").to_string();
-        return Ok(SecretSource::Doppler { secret_name: name, project: None, config: None });
+        return Ok(SecretSource::Doppler {
+            secret_name: name,
+            project: None,
+            config: None,
+        });
     }
     if src.starts_with('$') {
-        return Ok(SecretSource::EnvVar { var_name: src.trim_start_matches('$').to_string() });
+        return Ok(SecretSource::EnvVar {
+            var_name: src.trim_start_matches('$').to_string(),
+        });
     }
     if src.starts_with("env:") {
-        return Ok(SecretSource::EnvVar { var_name: src.trim_start_matches("env:").to_string() });
+        return Ok(SecretSource::EnvVar {
+            var_name: src.trim_start_matches("env:").to_string(),
+        });
     }
     if src == "keychain" || src.starts_with("keychain:") {
         let account = src.trim_start_matches("keychain:").to_string();

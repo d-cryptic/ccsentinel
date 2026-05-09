@@ -30,10 +30,9 @@ pub fn load_json(path: &Path) -> Result<Value> {
     if !path.exists() {
         return Ok(Value::Object(serde_json::Map::new()));
     }
-    let contents = std::fs::read_to_string(path)
-        .with_context(|| format!("reading {}", path.display()))?;
-    serde_json::from_str(&contents)
-        .with_context(|| format!("parsing JSON at {}", path.display()))
+    let contents =
+        std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    serde_json::from_str(&contents).with_context(|| format!("parsing JSON at {}", path.display()))
 }
 
 /// Perform the 3-layer merge and write the result to `output_path`.
@@ -111,7 +110,8 @@ mod tests {
 
         merge_and_write(&global, &profile_ov, &session_ov, &output).unwrap();
 
-        let result: Value = serde_json::from_str(&std::fs::read_to_string(&output).unwrap()).unwrap();
+        let result: Value =
+            serde_json::from_str(&std::fs::read_to_string(&output).unwrap()).unwrap();
         assert_eq!(result["model"], json!("sonnet"));
         assert_eq!(result["thinking"], json!(false));
     }

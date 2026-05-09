@@ -22,7 +22,10 @@ pub fn starship() -> Result<()> {
     }
 
     let quota_indicator = build_quota_indicator();
-    let output = format!("🛡 {}:{}{}", cfg.current_profile, cfg.current_session, quota_indicator);
+    let output = format!(
+        "🛡 {}:{}{}",
+        cfg.current_profile, cfg.current_session, quota_indicator
+    );
     print!("{}", output);
     Ok(())
 }

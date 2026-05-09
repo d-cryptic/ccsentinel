@@ -17,12 +17,15 @@ pub fn list_sessions(profile: String) -> Result<Vec<SessionDto>, String> {
     let profile_dir = platform::profile_dir(&profile);
     let mgr = SessionManager::new(profile_dir.join("sessions"));
     let sessions = mgr.list().map_err(|e| e.to_string())?;
-    Ok(sessions.into_iter().map(|s| SessionDto {
-        name: s.name,
-        tag: s.description,
-        archived: s.archived,
-        last_used: s.last_used.map(|dt| dt.to_rfc3339()),
-    }).collect())
+    Ok(sessions
+        .into_iter()
+        .map(|s| SessionDto {
+            name: s.name,
+            tag: s.description,
+            archived: s.archived,
+            last_used: s.last_used.map(|dt| dt.to_rfc3339()),
+        })
+        .collect())
 }
 
 #[tauri::command]

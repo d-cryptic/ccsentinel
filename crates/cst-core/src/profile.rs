@@ -153,7 +153,9 @@ impl ProfileManager {
                 if profile_toml.exists() {
                     match Profile::load(&entry.path()) {
                         Ok(p) => profiles.push(p),
-                        Err(e) => tracing::warn!("skipping malformed profile {:?}: {e}", entry.path()),
+                        Err(e) => {
+                            tracing::warn!("skipping malformed profile {:?}: {e}", entry.path())
+                        }
                     }
                 }
             }
@@ -222,20 +224,29 @@ fn validate_name(name: &str) -> Result<()> {
     if name.is_empty() {
         bail!("profile name cannot be empty");
     }
-    if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+    if !name
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
         bail!("profile name must contain only letters, digits, hyphens, and underscores: got '{name}'");
     }
     Ok(())
 }
 
 /// Recursively copy a directory.
+/// Symlinks are recreated as symlinks (not followed), so machine-specific
+/// symlinks (e.g. `.claude/agents → ~/.claude/agents`) remain correct in
+/// the cloned profile.
 fn copy_dir_all(src: &Path, dst: &Path) -> Result<()> {
     std::fs::create_dir_all(dst)?;
     for entry in std::fs::read_dir(src)? {
         let entry = entry?;
         let ty = entry.file_type()?;
         let dst_path = dst.join(entry.file_name());
-        if ty.is_dir() {
+        if ty.is_symlink() {
+            let target = std::fs::read_link(entry.path())?;
+            crate::platform::create_link(&target, &dst_path)?;
+        } else if ty.is_dir() {
             copy_dir_all(&entry.path(), &dst_path)?;
         } else {
             std::fs::copy(entry.path(), dst_path)?;
@@ -326,7 +337,12 @@ mod tests {
 
     #[test]
     fn test_auth_type_roundtrip_display_parse() {
-        for at in [AuthType::OAuth, AuthType::Api, AuthType::Bedrock, AuthType::Vertex] {
+        for at in [
+            AuthType::OAuth,
+            AuthType::Api,
+            AuthType::Bedrock,
+            AuthType::Vertex,
+        ] {
             let s = at.to_string();
             let parsed: AuthType = s.parse().unwrap();
             assert_eq!(at, parsed);

@@ -10,10 +10,7 @@
 
 use anyhow::Result;
 use cst_core::{
-    auto_switch::daemon as daemon_core,
-    config::GlobalConfig,
-    platform,
-    profile::ProfileManager,
+    auto_switch::daemon as daemon_core, config::GlobalConfig, platform, profile::ProfileManager,
     session::SessionManager,
 };
 
@@ -25,17 +22,33 @@ struct Check {
 
 impl Check {
     fn ok(label: impl Into<String>) -> Self {
-        Self { label: label.into(), passed: true, detail: None }
+        Self {
+            label: label.into(),
+            passed: true,
+            detail: None,
+        }
     }
     fn ok_detail(label: impl Into<String>, detail: impl Into<String>) -> Self {
-        Self { label: label.into(), passed: true, detail: Some(detail.into()) }
+        Self {
+            label: label.into(),
+            passed: true,
+            detail: Some(detail.into()),
+        }
     }
     fn fail(label: impl Into<String>, detail: impl Into<String>) -> Self {
-        Self { label: label.into(), passed: false, detail: Some(detail.into()) }
+        Self {
+            label: label.into(),
+            passed: false,
+            detail: Some(detail.into()),
+        }
     }
     fn warn(label: impl Into<String>, detail: impl Into<String>) -> Self {
         // Warn is displayed as a note, not a failure
-        Self { label: label.into(), passed: true, detail: Some(format!("note: {}", detail.into())) }
+        Self {
+            label: label.into(),
+            passed: true,
+            detail: Some(format!("note: {}", detail.into())),
+        }
     }
 }
 
@@ -47,22 +60,37 @@ pub fn run() -> Result<()> {
     section("Claude Code");
 
     match which::which("claude") {
-        Ok(path) => checks.push(Check::ok_detail("claude binary", path.to_string_lossy().to_string())),
-        Err(_) => checks.push(Check::fail("claude binary", "not found in PATH — is Claude Code installed?")),
+        Ok(path) => checks.push(Check::ok_detail(
+            "claude binary",
+            path.to_string_lossy().to_string(),
+        )),
+        Err(_) => checks.push(Check::fail(
+            "claude binary",
+            "not found in PATH — is Claude Code installed?",
+        )),
     }
 
     let global_claude = platform::global_claude_dir();
     if global_claude.exists() {
-        checks.push(Check::ok_detail("~/.claude/ directory", global_claude.display().to_string()));
+        checks.push(Check::ok_detail(
+            "~/.claude/ directory",
+            global_claude.display().to_string(),
+        ));
     } else {
-        checks.push(Check::fail("~/.claude/ directory", "not found — Claude Code may not be configured"));
+        checks.push(Check::fail(
+            "~/.claude/ directory",
+            "not found — Claude Code may not be configured",
+        ));
     }
 
     let claude_json = platform::global_claude_json();
     if claude_json.exists() {
         checks.push(Check::ok("~/.claude.json (OAuth creds)"));
     } else {
-        checks.push(Check::warn("~/.claude.json", "not found — OAuth profiles will need login"));
+        checks.push(Check::warn(
+            "~/.claude.json",
+            "not found — OAuth profiles will need login",
+        ));
     }
 
     flush_checks(&mut checks, &mut failures);
@@ -72,16 +100,25 @@ pub fn run() -> Result<()> {
 
     let data_dir = platform::data_dir();
     if data_dir.exists() {
-        checks.push(Check::ok_detail("~/.claude-sentinel/", data_dir.display().to_string()));
+        checks.push(Check::ok_detail(
+            "~/.claude-sentinel/",
+            data_dir.display().to_string(),
+        ));
     } else {
-        checks.push(Check::fail("~/.claude-sentinel/", "not found — run: cst init"));
+        checks.push(Check::fail(
+            "~/.claude-sentinel/",
+            "not found — run: cst init",
+        ));
     }
 
     let profiles_dir = platform::profiles_dir();
     if profiles_dir.exists() {
         checks.push(Check::ok("profiles/"));
     } else {
-        checks.push(Check::warn("profiles/", "no profiles yet — run: cst new <name>"));
+        checks.push(Check::warn(
+            "profiles/",
+            "no profiles yet — run: cst new <name>",
+        ));
     }
 
     match GlobalConfig::load() {
@@ -131,10 +168,9 @@ pub fn run() -> Result<()> {
                 // Sessions
                 let sm = SessionManager::new(platform::profile_dir(&p.name));
                 match sm.list() {
-                    Err(e) => checks.push(Check::fail(
-                        format!("  {}/sessions", p.name),
-                        e.to_string(),
-                    )),
+                    Err(e) => {
+                        checks.push(Check::fail(format!("  {}/sessions", p.name), e.to_string()))
+                    }
                     Ok(sessions) => {
                         for s in &sessions {
                             let claude_dir = platform::claude_config_dir(&p.name, &s.name);
@@ -153,7 +189,10 @@ pub fn run() -> Result<()> {
                                 } else {
                                     checks.push(Check::warn(
                                         format!("  {}:{} .claude/", p.name, s.name),
-                                        format!("missing symlinks: {} — run: cst sync", missing.join(", ")),
+                                        format!(
+                                            "missing symlinks: {} — run: cst sync",
+                                            missing.join(", ")
+                                        ),
                                     ));
                                 }
                             } else {
@@ -198,10 +237,18 @@ pub fn run() -> Result<()> {
         if let Some(b) = cst_core::broadcast::BroadcastSwitch::load_active() {
             checks.push(Check::warn(
                 "broadcast-switch.json",
-                format!("active: {} → {} (expires {})", b.from, b.to, b.expires_at.format("%H:%M:%S")),
+                format!(
+                    "active: {} → {} (expires {})",
+                    b.from,
+                    b.to,
+                    b.expires_at.format("%H:%M:%S")
+                ),
             ));
         } else {
-            checks.push(Check::warn("broadcast-switch.json", "stale file (expired, will be cleaned up)"));
+            checks.push(Check::warn(
+                "broadcast-switch.json",
+                "stale file (expired, will be cleaned up)",
+            ));
         }
     }
 
@@ -286,7 +333,9 @@ pub fn validate(profile: &str) -> Result<()> {
             let keys_path = auth_dir.join("api_keys.toml");
             if keys_path.exists() {
                 if let Ok(contents) = std::fs::read_to_string(&keys_path) {
-                    if let Ok(pool) = toml::from_str::<cst_core::auth::apikey::ApiKeyPool>(&contents) {
+                    if let Ok(pool) =
+                        toml::from_str::<cst_core::auth::apikey::ApiKeyPool>(&contents)
+                    {
                         let slots = pool.sorted_slots();
                         println!("✓ API key pool: {} slot(s)", slots.len());
                     }

@@ -157,20 +157,28 @@ mod tests {
 
     #[test]
     fn total_sums_in_and_out() {
-        let t = HistoryTokens { input_tokens: 300, output_tokens: 130, ..Default::default() };
+        let t = HistoryTokens {
+            input_tokens: 300,
+            output_tokens: 130,
+            ..Default::default()
+        };
         assert_eq!(t.total(), 430);
     }
 
     #[test]
     fn cost_estimate_nonzero_for_nonzero_tokens() {
-        let t = HistoryTokens { input_tokens: 10_000, output_tokens: 5_000, ..Default::default() };
+        let t = HistoryTokens {
+            input_tokens: 10_000,
+            output_tokens: 5_000,
+            ..Default::default()
+        };
         assert!(t.estimated_cost_usd() > 0.0);
     }
 
     #[test]
     fn parse_tokens_reads_file() {
-        use tempfile::NamedTempFile;
         use std::io::Write;
+        use tempfile::NamedTempFile;
         let mut f = NamedTempFile::new().unwrap();
         writeln!(f, r#"{{"usage":{{"input_tokens":42,"output_tokens":7}}}}"#).unwrap();
         let r = parse_tokens(f.path()).unwrap();
@@ -190,7 +198,7 @@ mod tests {
         // Partial JSON line (truncated mid-write) must not panic or corrupt totals
         let jsonl = [
             r#"{"usage":{"input_tokens":10,"output_tokens":5}}"#,
-            r#"{"usage":{"input_tokens":20"#,  // truncated
+            r#"{"usage":{"input_tokens":20"#, // truncated
             r#"{"usage":{"input_tokens":30,"output_tokens":15}}"#,
         ]
         .join("\n");
@@ -218,8 +226,8 @@ mod tests {
         // emit events where both fields carry the same tokens.
         let jsonl = r#"{"usage":{"input_tokens":100,"output_tokens":50},"message":{"usage":{"input_tokens":200,"output_tokens":80}}}"#;
         let r = sum_tokens(jsonl);
-        assert_eq!(r.input_tokens, 300);   // 100 + 200
-        assert_eq!(r.output_tokens, 130);  // 50  + 80
+        assert_eq!(r.input_tokens, 300); // 100 + 200
+        assert_eq!(r.output_tokens, 130); // 50  + 80
     }
 
     #[test]
@@ -235,8 +243,14 @@ mod tests {
 
     #[test]
     fn cost_proportional_to_tokens() {
-        let t1 = HistoryTokens { input_tokens: 1_000_000, ..Default::default() };
-        let t2 = HistoryTokens { input_tokens: 2_000_000, ..Default::default() };
+        let t1 = HistoryTokens {
+            input_tokens: 1_000_000,
+            ..Default::default()
+        };
+        let t2 = HistoryTokens {
+            input_tokens: 2_000_000,
+            ..Default::default()
+        };
         assert!((t2.estimated_cost_usd() - 2.0 * t1.estimated_cost_usd()).abs() < 1e-9);
     }
 

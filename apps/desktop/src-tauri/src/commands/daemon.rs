@@ -39,8 +39,13 @@ pub fn daemon_status() -> DaemonStatus {
         SchedulerState::load()
             .map(|s| s.entries.iter().filter(|e| !e.switched_back).count())
             .unwrap_or(0)
-    } else { 0 };
-    DaemonStatus { running, active_timers }
+    } else {
+        0
+    };
+    DaemonStatus {
+        running,
+        active_timers,
+    }
 }
 
 #[tauri::command]
@@ -64,26 +69,33 @@ pub fn daemon_stop() -> Result<(), String> {
 pub fn get_switch_log() -> Result<Vec<SwitchEventDto>, String> {
     let log = SwitchLog::open();
     let events = log.last_n(50).map_err(|e| e.to_string())?;
-    Ok(events.into_iter().map(|ev| SwitchEventDto {
-        timestamp: ev.timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
-        from_profile: ev.from_profile,
-        from_session: ev.from_session,
-        to_profile: ev.to_profile,
-        to_session: ev.to_session,
-        reason: ev.reason.to_string(),
-        detail: ev.detail,
-    }).collect())
+    Ok(events
+        .into_iter()
+        .map(|ev| SwitchEventDto {
+            timestamp: ev.timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+            from_profile: ev.from_profile,
+            from_session: ev.from_session,
+            to_profile: ev.to_profile,
+            to_session: ev.to_session,
+            reason: ev.reason.to_string(),
+            detail: ev.detail,
+        })
+        .collect())
 }
 
 #[tauri::command]
 pub fn get_scheduler_state() -> Result<Vec<SchedulerEntryDto>, String> {
     let state = SchedulerState::load().map_err(|e| e.to_string())?;
-    Ok(state.entries.into_iter().map(|e| SchedulerEntryDto {
-        time_until_refill: e.time_until_refill(),
-        profile: e.profile,
-        detected_at: e.detected_at.format("%H:%M:%S UTC").to_string(),
-        refill_at: e.refill_at.format("%H:%M:%S UTC").to_string(),
-        auto_switch_back: e.auto_switch_back,
-        switched_back: e.switched_back,
-    }).collect())
+    Ok(state
+        .entries
+        .into_iter()
+        .map(|e| SchedulerEntryDto {
+            time_until_refill: e.time_until_refill(),
+            profile: e.profile,
+            detected_at: e.detected_at.format("%H:%M:%S UTC").to_string(),
+            refill_at: e.refill_at.format("%H:%M:%S UTC").to_string(),
+            auto_switch_back: e.auto_switch_back,
+            switched_back: e.switched_back,
+        })
+        .collect())
 }

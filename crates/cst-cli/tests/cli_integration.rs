@@ -316,7 +316,11 @@ fn new_profile_api_type_creates_profile() {
     );
 
     let out = env.run_ok(&["list"]);
-    assert!(out.contains("test-api"), "list must show new profile: {}", out);
+    assert!(
+        out.contains("test-api"),
+        "list must show new profile: {}",
+        out
+    );
 }
 
 #[test]
@@ -994,10 +998,7 @@ fn team_push_without_init_fails() {
     }
     let env = TestEnv::new();
     let out = env.run(&["team", "push"]);
-    assert!(
-        !out.status.success(),
-        "team push without init should fail"
-    );
+    assert!(!out.status.success(), "team push without init should fail");
 }
 
 // ─── Starship / Tmux integrations ───────────────────────────────────────────
@@ -1024,11 +1025,7 @@ fn cst_data_dir_override_is_respected() {
     env.create_profile("isolated-test", "api");
 
     // The profile must be inside our temp data dir, not the real home
-    let profile_dir = env
-        .data_dir
-        .path()
-        .join("profiles")
-        .join("isolated-test");
+    let profile_dir = env.data_dir.path().join("profiles").join("isolated-test");
     assert!(
         profile_dir.exists(),
         "profile must be in CST_DATA_DIR temp dir"
@@ -1058,7 +1055,13 @@ fn separate_test_envs_are_isolated() {
     let out2 = env2.run_ok(&["list"]);
 
     assert!(out1.contains("env1-only"), "env1 must see its profile");
-    assert!(!out1.contains("env2-only"), "env1 must NOT see env2 profile");
+    assert!(
+        !out1.contains("env2-only"),
+        "env1 must NOT see env2 profile"
+    );
     assert!(out2.contains("env2-only"), "env2 must see its profile");
-    assert!(!out2.contains("env1-only"), "env2 must NOT see env1 profile");
+    assert!(
+        !out2.contains("env1-only"),
+        "env2 must NOT see env1 profile"
+    );
 }

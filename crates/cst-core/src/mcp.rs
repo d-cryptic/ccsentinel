@@ -77,7 +77,10 @@ mod tests {
     fn test_apply_adds_server() {
         let mut add = HashMap::new();
         add.insert("custom-mcp".to_string(), json!({"command": "node"}));
-        let ov = McpOverride { disable: vec![], add };
+        let ov = McpOverride {
+            disable: vec![],
+            add,
+        };
         let result = ov.apply(&sample_global());
         assert!(result.contains_key("custom-mcp"));
     }

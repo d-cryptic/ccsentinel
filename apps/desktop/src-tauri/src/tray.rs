@@ -17,12 +17,21 @@ pub fn setup_tray<R: Runtime>(app: &mut App<R>) -> tauri::Result<()> {
     };
 
     // Build tray menu
-    let active_item = MenuItem::with_id(app, "active", format!("Active: {}", active), false, None::<&str>)?;
+    let active_item = MenuItem::with_id(
+        app,
+        "active",
+        format!("Active: {}", active),
+        false,
+        None::<&str>,
+    )?;
     let separator = PredefinedMenuItem::separator(app)?;
     let open_item = MenuItem::with_id(app, "open", "Open Sentinel", true, None::<&str>)?;
     let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
 
-    let menu = Menu::with_items(app, &[&active_item, &separator, &open_item, &separator, &quit_item])?;
+    let menu = Menu::with_items(
+        app,
+        &[&active_item, &separator, &open_item, &separator, &quit_item],
+    )?;
 
     let _tray = TrayIconBuilder::new()
         .menu(&menu)
@@ -38,7 +47,11 @@ pub fn setup_tray<R: Runtime>(app: &mut App<R>) -> tauri::Result<()> {
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click { button: MouseButton::Left, .. } = event {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                ..
+            } = event
+            {
                 let app = tray.app_handle();
                 if let Some(window) = app.get_webview_window("main") {
                     if window.is_visible().unwrap_or(false) {

@@ -168,7 +168,9 @@ mod tests {
     #[test]
     fn test_parse_profile_session_for_broadcast() {
         let input = "work:backend";
-        let (p, s) = input.split_once(':').map(|(a, b)| (a.to_string(), b.to_string()))
+        let (p, s) = input
+            .split_once(':')
+            .map(|(a, b)| (a.to_string(), b.to_string()))
             .unwrap_or_else(|| (input.to_string(), "default".to_string()));
         assert_eq!(p, "work");
         assert_eq!(s, "backend");

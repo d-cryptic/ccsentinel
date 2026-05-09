@@ -156,9 +156,7 @@ impl TopState {
         if let Ok(events) = log.last_n(5) {
             self.recent_events = events
                 .iter()
-                .map(|e| {
-                    format!("{} → {} | {}", e.from_profile, e.to_profile, e.reason)
-                })
+                .map(|e| format!("{} → {} | {}", e.from_profile, e.to_profile, e.reason))
                 .collect();
         }
 
@@ -231,7 +229,10 @@ fn render(f: &mut Frame, state: &TopState) {
 
 fn render_header(f: &mut Frame, state: &TopState, area: Rect) {
     let daemon_status = if state.daemon_running {
-        Span::styled(" ● DAEMON ON ", Style::default().fg(Color::Black).bg(Color::White))
+        Span::styled(
+            " ● DAEMON ON ",
+            Style::default().fg(Color::Black).bg(Color::White),
+        )
     } else {
         Span::styled(" ○ DAEMON OFF ", Style::default().fg(Color::DarkGray))
     };
@@ -267,7 +268,14 @@ fn render_header(f: &mut Frame, state: &TopState, area: Rect) {
 
 fn render_body(f: &mut Frame, state: &TopState, area: Rect) {
     let header_cells = [
-        "PROFILE", "SESSION", "AUTH", "IN", "OUT", "RATE LIMITS", "COST $", "LAST USED",
+        "PROFILE",
+        "SESSION",
+        "AUTH",
+        "IN",
+        "OUT",
+        "RATE LIMITS",
+        "COST $",
+        "LAST USED",
     ]
     .iter()
     .map(|h| Cell::from(*h).style(Style::default().add_modifier(Modifier::BOLD)));
@@ -364,8 +372,11 @@ fn render_scheduler(f: &mut Frame, state: &TopState, area: Rect) {
         active
     };
 
-    let widget = Paragraph::new(content)
-        .block(Block::default().borders(Borders::ALL).title(" QUOTA TIMERS "));
+    let widget = Paragraph::new(content).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" QUOTA TIMERS "),
+    );
     f.render_widget(widget, area);
 }
 
@@ -383,8 +394,11 @@ fn render_recent_events(f: &mut Frame, state: &TopState, area: Rect) {
             .collect()
     };
 
-    let widget = Paragraph::new(lines)
-        .block(Block::default().borders(Borders::ALL).title(" RECENT SWITCHES "));
+    let widget = Paragraph::new(lines).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" RECENT SWITCHES "),
+    );
     f.render_widget(widget, area);
 }
 

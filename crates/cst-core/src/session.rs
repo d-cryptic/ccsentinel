@@ -24,19 +24,7 @@ impl Session {
     pub fn load(session_dir: &Path) -> Result<Self> {
         let path = session_dir.join("session.toml");
         if !path.exists() {
-            // Synthesise from directory name for legacy / bare dirs
-            let name = session_dir
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("default")
-                .to_string();
-            return Ok(Self {
-                name,
-                description: String::new(),
-                created_at: Utc::now(),
-                last_used: None,
-                archived: false,
-            });
+            anyhow::bail!("no session.toml in {}", session_dir.display());
         }
         let contents = std::fs::read_to_string(&path)?;
         toml::from_str(&contents).context("parsing session.toml")
@@ -98,7 +86,10 @@ impl SessionManager {
                 match Session::load(&entry.path()) {
                     Ok(s) if !s.archived => sessions.push(s),
                     Ok(_) => {} // archived, skip
-                    Err(e) => tracing::warn!("skipping malformed session {:?}: {e}", entry.path()),
+                    Err(e) => tracing::debug!(
+                        "skipping directory without session.toml {:?}: {e}",
+                        entry.path()
+                    ),
                 }
             }
         }
@@ -180,8 +171,7 @@ pub fn setup_claude_dir(claude_dir: &Path, global_claude_dir: &Path) -> Result<(
         let src = global_claude_dir.join(dir_name);
         let dst = claude_dir.join(dir_name);
         if src.exists() {
-            platform::create_link(&src, &dst)
-                .with_context(|| format!("symlinking {dir_name}"))?;
+            platform::create_link(&src, &dst).with_context(|| format!("symlinking {dir_name}"))?;
         }
     }
     // Shared symlinks — files
@@ -189,8 +179,7 @@ pub fn setup_claude_dir(claude_dir: &Path, global_claude_dir: &Path) -> Result<(
         let src = global_claude_dir.join(file_name);
         let dst = claude_dir.join(file_name);
         if src.exists() {
-            platform::create_link(&src, &dst)
-                .with_context(|| format!("symlinking {file_name}"))?;
+            platform::create_link(&src, &dst).with_context(|| format!("symlinking {file_name}"))?;
         }
     }
     Ok(())
@@ -200,7 +189,10 @@ fn validate_session_name(name: &str) -> Result<()> {
     if name.is_empty() {
         bail!("session name cannot be empty");
     }
-    if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+    if !name
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
         bail!("session name must contain only letters, digits, hyphens, and underscores");
     }
     Ok(())
@@ -240,7 +232,11 @@ mod tests {
         std::fs::create_dir_all(gd.path().join("agents")).unwrap();
         mgr.create("test", gd.path()).unwrap();
         // projects/ should exist locally
-        assert!(mgr.session_dir("test").join(".claude").join("projects").exists());
+        assert!(mgr
+            .session_dir("test")
+            .join(".claude")
+            .join("projects")
+            .exists());
     }
 
     #[test]

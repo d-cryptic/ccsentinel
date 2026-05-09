@@ -18,7 +18,11 @@ pub fn run() -> Result<()> {
         let sessions = session_mgr.list().unwrap_or_default();
         let active = current.current_profile == p.name;
         let marker = if active { "▶" } else { " " };
-        println!("{marker} {name}  [{auth}]", name = p.name, auth = p.auth_type);
+        println!(
+            "{marker} {name}  [{auth}]",
+            name = p.name,
+            auth = p.auth_type
+        );
         for s in &sessions {
             let s_active = active && current.current_session == s.name;
             let s_marker = if s_active { "  ✓" } else { "   " };

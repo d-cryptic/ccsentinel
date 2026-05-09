@@ -1,5 +1,5 @@
 use anyhow::Result;
-use cst_core::{platform, auth::oauth};
+use cst_core::{auth::oauth, platform};
 
 pub async fn run(yes: bool, shell: Option<&str>, start_daemon: bool) -> Result<()> {
     println!("┌─────────────────────────────────────────────┐");
@@ -30,7 +30,13 @@ pub async fn run(yes: bool, shell: Option<&str>, start_daemon: bool) -> Result<(
     // Step 3: Shell init
     let shell_name = shell.unwrap_or_else(|| {
         let s = std::env::var("SHELL").unwrap_or_default();
-        if s.contains("zsh") { "zsh" } else if s.contains("fish") { "fish" } else { "bash" }
+        if s.contains("zsh") {
+            "zsh"
+        } else if s.contains("fish") {
+            "fish"
+        } else {
+            "bash"
+        }
     });
     println!("[3/4] Shell init snippet (add to ~/.{shell_name}rc):");
     println!("      eval \"$(cst shell-init)\"");

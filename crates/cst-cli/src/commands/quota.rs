@@ -5,13 +5,8 @@
 
 use anyhow::Result;
 use cst_core::{
-    auto_switch::scheduler::SchedulerState,
-    config::GlobalConfig,
-    history_parser,
-    platform,
-    profile::ProfileManager,
-    session::SessionManager,
-    stats::SessionStats,
+    auto_switch::scheduler::SchedulerState, config::GlobalConfig, history_parser, platform,
+    profile::ProfileManager, session::SessionManager, stats::SessionStats,
 };
 
 pub fn remaining() -> Result<()> {
@@ -42,7 +37,10 @@ pub fn remaining() -> Result<()> {
     };
     let live_label = if live.is_some() { " (live)" } else { "" };
 
-    println!("── Token Usage (current session){} ──────────────────────────", live_label);
+    println!(
+        "── Token Usage (current session){} ──────────────────────────",
+        live_label
+    );
     println!("  Tokens in   : {}", format_tokens(tokens_in));
     println!("  Tokens out  : {}", format_tokens(tokens_out));
     println!("  Total       : {}", format_tokens(tokens_in + tokens_out));
@@ -59,15 +57,23 @@ pub fn remaining() -> Result<()> {
     let sm = SessionManager::new(platform::profile_dir(profile));
     if let Ok(sessions) = sm.list() {
         if sessions.len() > 1 {
-            let (total_in, total_out, total_rl, total_cost) = sessions.iter().fold(
-                (0u64, 0u64, 0u64, 0f64),
-                |(tin, tout, trl, tcost), s| {
-                    let sd = platform::session_dir(profile, &s.name);
-                    let st = SessionStats::load(&sd).unwrap_or_default();
-                    (tin + st.tokens_in, tout + st.tokens_out, trl + st.rate_limit_hits, tcost + st.estimated_cost_usd)
-                },
+            let (total_in, total_out, total_rl, total_cost) =
+                sessions
+                    .iter()
+                    .fold((0u64, 0u64, 0u64, 0f64), |(tin, tout, trl, tcost), s| {
+                        let sd = platform::session_dir(profile, &s.name);
+                        let st = SessionStats::load(&sd).unwrap_or_default();
+                        (
+                            tin + st.tokens_in,
+                            tout + st.tokens_out,
+                            trl + st.rate_limit_hits,
+                            tcost + st.estimated_cost_usd,
+                        )
+                    });
+            println!(
+                "── All Sessions ({}) ───────────────────────────────────────",
+                profile
             );
-            println!("── All Sessions ({}) ───────────────────────────────────────", profile);
             println!("  Tokens in   : {}", format_tokens(total_in));
             println!("  Tokens out  : {}", format_tokens(total_out));
             println!("  Total       : {}", format_tokens(total_in + total_out));
@@ -90,10 +96,7 @@ pub fn remaining() -> Result<()> {
     } else {
         println!("── Rate Limit Timers ───────────────────────────────────────");
         for entry in &active {
-            println!(
-                "  Profile     : {}",
-                entry.profile
-            );
+            println!("  Profile     : {}", entry.profile);
             println!(
                 "  Hit at      : {}",
                 entry.detected_at.format("%Y-%m-%d %H:%M UTC")
@@ -117,17 +120,24 @@ pub fn remaining() -> Result<()> {
             println!("── All Profiles ────────────────────────────────────────────");
             for p in &profiles {
                 let sm2 = SessionManager::new(platform::profile_dir(&p.name));
-                let (tin, tout, rl) = sm2
-                    .list()
-                    .unwrap_or_default()
-                    .iter()
-                    .fold((0u64, 0u64, 0u64), |(tin, tout, rl), s| {
+                let (tin, tout, rl) = sm2.list().unwrap_or_default().iter().fold(
+                    (0u64, 0u64, 0u64),
+                    |(tin, tout, rl), s| {
                         let sd = platform::session_dir(&p.name, &s.name);
                         let st = SessionStats::load(&sd).unwrap_or_default();
-                        (tin + st.tokens_in, tout + st.tokens_out, rl + st.rate_limit_hits)
-                    });
+                        (
+                            tin + st.tokens_in,
+                            tout + st.tokens_out,
+                            rl + st.rate_limit_hits,
+                        )
+                    },
+                );
                 let active_marker = if p.name == *profile { " [ACTIVE]" } else { "" };
-                let rl_str = if rl > 0 { format!("  ⚠ {} rate limits", rl) } else { String::new() };
+                let rl_str = if rl > 0 {
+                    format!("  ⚠ {} rate limits", rl)
+                } else {
+                    String::new()
+                };
                 println!(
                     "  {:<20} in:{:>8}  out:{:>8}{}{}",
                     format!("{}{}", p.name, active_marker),

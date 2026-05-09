@@ -52,9 +52,11 @@ impl SecretSource {
         match self {
             SecretSource::Keychain { account } => retrieve_keychain(account),
             SecretSource::OnePassword { reference } => retrieve_1password(reference),
-            SecretSource::Doppler { secret_name, project, config } => {
-                retrieve_doppler(secret_name, project.as_deref(), config.as_deref())
-            }
+            SecretSource::Doppler {
+                secret_name,
+                project,
+                config,
+            } => retrieve_doppler(secret_name, project.as_deref(), config.as_deref()),
             SecretSource::EnvVar { var_name } => retrieve_env_var(var_name),
         }
     }
@@ -64,10 +66,18 @@ impl SecretSource {
         match self {
             SecretSource::Keychain { account } => format!("keychain:{}", account),
             SecretSource::OnePassword { reference } => format!("1password:{}", reference),
-            SecretSource::Doppler { secret_name, project, config } => {
+            SecretSource::Doppler {
+                secret_name,
+                project,
+                config,
+            } => {
                 let mut s = format!("doppler:{}", secret_name);
-                if let Some(p) = project { s.push_str(&format!(" (project={})", p)); }
-                if let Some(c) = config { s.push_str(&format!(" config={}", c)); }
+                if let Some(p) = project {
+                    s.push_str(&format!(" (project={})", p));
+                }
+                if let Some(c) = config {
+                    s.push_str(&format!(" config={}", c));
+                }
                 s
             }
             SecretSource::EnvVar { var_name } => format!("env:${}", var_name),
@@ -95,9 +105,10 @@ impl SecretSource {
 // ─── Provider implementations ────────────────────────────────────────────────
 
 fn retrieve_keychain(account: &str) -> Result<String> {
-    let entry = keyring::Entry::new("claude-sentinel", account)
-        .context("creating keychain entry")?;
-    entry.get_password()
+    let entry =
+        keyring::Entry::new("claude-sentinel", account).context("creating keychain entry")?;
+    entry
+        .get_password()
         .context("retrieving key from keychain — run `cst add-key` to populate")
 }
 
@@ -114,13 +125,22 @@ fn retrieve_1password(reference: &str) -> Result<String> {
     Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
 }
 
-fn retrieve_doppler(secret_name: &str, project: Option<&str>, config: Option<&str>) -> Result<String> {
+fn retrieve_doppler(
+    secret_name: &str,
+    project: Option<&str>,
+    config: Option<&str>,
+) -> Result<String> {
     let mut cmd = Command::new("doppler");
     cmd.args(["secrets", "get", secret_name, "--plain"]);
-    if let Some(p) = project { cmd.args(["--project", p]); }
-    if let Some(c) = config  { cmd.args(["--config", c]); }
+    if let Some(p) = project {
+        cmd.args(["--project", p]);
+    }
+    if let Some(c) = config {
+        cmd.args(["--config", c]);
+    }
 
-    let out = cmd.output()
+    let out = cmd
+        .output()
         .context("running `doppler secrets get` — is Doppler CLI installed and configured?")?;
 
     if !out.status.success() {
@@ -131,8 +151,7 @@ fn retrieve_doppler(secret_name: &str, project: Option<&str>, config: Option<&st
 }
 
 fn retrieve_env_var(var_name: &str) -> Result<String> {
-    std::env::var(var_name)
-        .with_context(|| format!("environment variable ${} not set", var_name))
+    std::env::var(var_name).with_context(|| format!("environment variable ${} not set", var_name))
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -143,28 +162,42 @@ mod tests {
 
     #[test]
     fn env_var_source_reads_env() {
-        unsafe { std::env::set_var("_CST_TEST_KEY", "sk-ant-test"); }
-        let src = SecretSource::EnvVar { var_name: "_CST_TEST_KEY".to_string() };
+        unsafe {
+            std::env::set_var("_CST_TEST_KEY", "sk-ant-test");
+        }
+        let src = SecretSource::EnvVar {
+            var_name: "_CST_TEST_KEY".to_string(),
+        };
         assert_eq!(src.retrieve().unwrap(), "sk-ant-test");
-        unsafe { std::env::remove_var("_CST_TEST_KEY"); }
+        unsafe {
+            std::env::remove_var("_CST_TEST_KEY");
+        }
     }
 
     #[test]
     fn env_var_source_missing_errors() {
-        unsafe { std::env::remove_var("_CST_DEFINITELY_MISSING"); }
-        let src = SecretSource::EnvVar { var_name: "_CST_DEFINITELY_MISSING".to_string() };
+        unsafe {
+            std::env::remove_var("_CST_DEFINITELY_MISSING");
+        }
+        let src = SecretSource::EnvVar {
+            var_name: "_CST_DEFINITELY_MISSING".to_string(),
+        };
         assert!(src.retrieve().is_err());
     }
 
     #[test]
     fn describe_keychain() {
-        let s = SecretSource::Keychain { account: "work-slot1".to_string() };
+        let s = SecretSource::Keychain {
+            account: "work-slot1".to_string(),
+        };
         assert_eq!(s.describe(), "keychain:work-slot1");
     }
 
     #[test]
     fn describe_1password() {
-        let s = SecretSource::OnePassword { reference: "op://Personal/Claude/cred".to_string() };
+        let s = SecretSource::OnePassword {
+            reference: "op://Personal/Claude/cred".to_string(),
+        };
         assert!(s.describe().starts_with("1password:"));
     }
 
@@ -181,13 +214,17 @@ mod tests {
 
     #[test]
     fn describe_env_var() {
-        let s = SecretSource::EnvVar { var_name: "MY_KEY".to_string() };
+        let s = SecretSource::EnvVar {
+            var_name: "MY_KEY".to_string(),
+        };
         assert_eq!(s.describe(), "env:$MY_KEY");
     }
 
     #[test]
     fn serde_roundtrip_keychain() {
-        let s = SecretSource::Keychain { account: "work-slot1".to_string() };
+        let s = SecretSource::Keychain {
+            account: "work-slot1".to_string(),
+        };
         let json = serde_json::to_string(&s).unwrap();
         let back: SecretSource = serde_json::from_str(&json).unwrap();
         assert_eq!(s, back);
@@ -195,7 +232,9 @@ mod tests {
 
     #[test]
     fn serde_roundtrip_1password() {
-        let s = SecretSource::OnePassword { reference: "op://P/I/F".to_string() };
+        let s = SecretSource::OnePassword {
+            reference: "op://P/I/F".to_string(),
+        };
         let json = serde_json::to_string(&s).unwrap();
         let back: SecretSource = serde_json::from_str(&json).unwrap();
         assert_eq!(s, back);
@@ -215,7 +254,9 @@ mod tests {
 
     #[test]
     fn serde_roundtrip_env_var() {
-        let s = SecretSource::EnvVar { var_name: "MY_KEY".to_string() };
+        let s = SecretSource::EnvVar {
+            var_name: "MY_KEY".to_string(),
+        };
         let toml = toml::to_string(&s).unwrap();
         let back: SecretSource = toml::from_str(&toml).unwrap();
         assert_eq!(s, back);
@@ -227,10 +268,18 @@ mod tests {
     fn describe_1password_contains_reference_not_secret() {
         // describe() must show the REFERENCE (vault path), not a retrieved value
         let reference = "op://Personal/Claude/credential";
-        let s = SecretSource::OnePassword { reference: reference.to_string() };
+        let s = SecretSource::OnePassword {
+            reference: reference.to_string(),
+        };
         let desc = s.describe();
-        assert!(desc.contains(reference), "describe should include the op:// reference for diagnostics");
-        assert!(!desc.contains("sk-ant"), "describe must never embed an actual secret");
+        assert!(
+            desc.contains(reference),
+            "describe should include the op:// reference for diagnostics"
+        );
+        assert!(
+            !desc.contains("sk-ant"),
+            "describe must never embed an actual secret"
+        );
     }
 
     #[test]
@@ -264,24 +313,34 @@ mod tests {
     #[test]
     fn env_var_empty_value_succeeds() {
         // An env var set to "" is present and retrievable (empty string is valid)
-        unsafe { std::env::set_var("_CST_TEST_EMPTY", ""); }
-        let src = SecretSource::EnvVar { var_name: "_CST_TEST_EMPTY".to_string() };
+        unsafe {
+            std::env::set_var("_CST_TEST_EMPTY", "");
+        }
+        let src = SecretSource::EnvVar {
+            var_name: "_CST_TEST_EMPTY".to_string(),
+        };
         assert_eq!(src.retrieve().unwrap(), "");
-        unsafe { std::env::remove_var("_CST_TEST_EMPTY"); }
+        unsafe {
+            std::env::remove_var("_CST_TEST_EMPTY");
+        }
     }
 
     // ── check_tool_available ──────────────────────────────────────────────
 
     #[test]
     fn check_tool_available_keychain_always_ok() {
-        let s = SecretSource::Keychain { account: "test".to_string() };
+        let s = SecretSource::Keychain {
+            account: "test".to_string(),
+        };
         // Keychain provider needs no external CLI
         assert!(s.check_tool_available().is_ok());
     }
 
     #[test]
     fn check_tool_available_env_var_always_ok() {
-        let s = SecretSource::EnvVar { var_name: "ANYTHING".to_string() };
+        let s = SecretSource::EnvVar {
+            var_name: "ANYTHING".to_string(),
+        };
         assert!(s.check_tool_available().is_ok());
     }
 
@@ -289,7 +348,9 @@ mod tests {
 
     #[test]
     fn serde_json_tag_field_is_provider() {
-        let s = SecretSource::Keychain { account: "acc".to_string() };
+        let s = SecretSource::Keychain {
+            account: "acc".to_string(),
+        };
         let json = serde_json::to_string(&s).unwrap();
         // The discriminant tag must be "provider" per #[serde(tag = "provider")]
         assert!(json.contains("\"provider\""));

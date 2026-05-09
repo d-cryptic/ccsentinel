@@ -78,7 +78,12 @@ impl SchedulerState {
     }
 
     /// Record a rate-limit hit for `profile`. Replaces any existing entry.
-    pub fn record_rate_limit(&mut self, profile: &str, estimate_minutes: u64, auto_switch_back: bool) {
+    pub fn record_rate_limit(
+        &mut self,
+        profile: &str,
+        estimate_minutes: u64,
+        auto_switch_back: bool,
+    ) {
         let now = Utc::now();
         let refill_at = now + Duration::minutes(estimate_minutes as i64);
         // Remove any existing entry for this profile
@@ -94,7 +99,10 @@ impl SchedulerState {
 
     /// Return all entries due for switch-back (refill time passed, not yet switched).
     pub fn pending_switchbacks(&self) -> Vec<&RateLimitEntry> {
-        self.entries.iter().filter(|e| e.is_ready_for_switchback()).collect()
+        self.entries
+            .iter()
+            .filter(|e| e.is_ready_for_switchback())
+            .collect()
     }
 
     /// Mark a profile's entry as switched-back.

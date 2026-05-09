@@ -25,9 +25,15 @@ pub fn configure(profile: &str) -> Result<()> {
     println!();
     if !profile_dir.join("auto-switch.toml").exists() {
         cfg.save(&profile_dir)?;
-        println!("Created {}/auto-switch.toml — edit it to configure your fallback chain.", profile_dir.display());
+        println!(
+            "Created {}/auto-switch.toml — edit it to configure your fallback chain.",
+            profile_dir.display()
+        );
     } else {
-        println!("Edit {}/auto-switch.toml to update settings.", profile_dir.display());
+        println!(
+            "Edit {}/auto-switch.toml to update settings.",
+            profile_dir.display()
+        );
     }
     Ok(())
 }
@@ -39,7 +45,10 @@ pub fn log() -> Result<()> {
         println!("No auto-switch events recorded.");
         return Ok(());
     }
-    println!("{:<24} {:<20} {:<20} {}", "TIMESTAMP", "FROM", "TO", "REASON");
+    println!(
+        "{:<24} {:<20} {:<20} {}",
+        "TIMESTAMP", "FROM", "TO", "REASON"
+    );
     println!("{}", "─".repeat(80));
     for ev in &events {
         println!(
@@ -67,14 +76,23 @@ pub fn test_chain(profile: &str) -> Result<()> {
         return Ok(());
     }
     println!("  fallback_chain:");
-    let current = GlobalConfig::load().map(|c| c.current_profile).unwrap_or_default();
+    let current = GlobalConfig::load()
+        .map(|c| c.current_profile)
+        .unwrap_or_default();
     for (i, p) in cfg.fallback_chain.iter().enumerate() {
         let marker = if p == &current { " ← current" } else { "" };
-        let exists_mark = if platform::profile_dir(p).exists() { "✓" } else { "✗ NOT FOUND" };
+        let exists_mark = if platform::profile_dir(p).exists() {
+            "✓"
+        } else {
+            "✗ NOT FOUND"
+        };
         println!("    {}. {} {} {}", i + 1, p, exists_mark, marker);
     }
     if let Some(sched) = &cfg.schedule {
-        println!("  schedule: {} ({}) → fallback: {}", sched.active_hours, sched.timezone, sched.fallback);
+        println!(
+            "  schedule: {} ({}) → fallback: {}",
+            sched.active_hours, sched.timezone, sched.fallback
+        );
     }
     Ok(())
 }
@@ -86,7 +104,10 @@ pub fn pause(minutes: Option<u64>) -> Result<()> {
         Some(m) => {
             let resume_at = chrono::Utc::now() + chrono::Duration::minutes(m as i64);
             std::fs::write(&pause_file, resume_at.to_rfc3339())?;
-            println!("Auto-switch paused for {m} minutes (resumes at {}).", resume_at.format("%H:%M UTC"));
+            println!(
+                "Auto-switch paused for {m} minutes (resumes at {}).",
+                resume_at.format("%H:%M UTC")
+            );
         }
         None => {
             std::fs::write(&pause_file, "indefinite")?;

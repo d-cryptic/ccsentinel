@@ -137,9 +137,7 @@ enum Commands {
     Sync,
 
     /// Show usage statistics.
-    Stats {
-        profile_session: Option<String>,
-    },
+    Stats { profile_session: Option<String> },
 
     /// Health check — validate all profiles, symlinks, and credentials.
     Doctor,
@@ -301,8 +299,7 @@ async fn main() -> Result<()> {
     // Initialise tracing subscriber (respects RUST_LOG)
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("cst=info".parse()?),
+            tracing_subscriber::EnvFilter::from_default_env().add_directive("cst=info".parse()?),
         )
         .with_target(false)
         .init();
@@ -317,15 +314,12 @@ async fn main() -> Result<()> {
         Some(Commands::Tui) => commands::tui::run().await,
         Some(Commands::ShellInit { shell }) => shell_cmd::shell_init(shell),
         Some(Commands::Env { profile_session }) => shell_cmd::env_cmd(&profile_session),
-        Some(Commands::BroadcastSwitch { current, already_applied_id }) => {
-            commands::switch_all::broadcast_switch_check(&current, &already_applied_id)
-        }
-        Some(Commands::AutoDetect { dir, current }) => {
-            commands::auto_detect::check(&dir, &current)
-        }
-        Some(Commands::AutoDetectStatus { dir }) => {
-            commands::auto_detect::status(&dir)
-        }
+        Some(Commands::BroadcastSwitch {
+            current,
+            already_applied_id,
+        }) => commands::switch_all::broadcast_switch_check(&current, &already_applied_id),
+        Some(Commands::AutoDetect { dir, current }) => commands::auto_detect::check(&dir, &current),
+        Some(Commands::AutoDetectStatus { dir }) => commands::auto_detect::status(&dir),
         Some(Commands::Status) => commands::status::run(),
         Some(Commands::List) => commands::list::run(),
         Some(Commands::Remaining) => commands::quota::remaining(),
@@ -333,24 +327,33 @@ async fn main() -> Result<()> {
         Some(Commands::SwitchAll { from, to }) => commands::switch_all::run(&from, &to),
         Some(Commands::History) => commands::history::run(),
         Some(Commands::Why) => commands::history::why(),
-        Some(Commands::New { name, auth, template }) => {
-            profile_cmd::new(&name, &auth, template.as_deref()).await
-        }
+        Some(Commands::New {
+            name,
+            auth,
+            template,
+        }) => profile_cmd::new(&name, &auth, template.as_deref()).await,
         Some(Commands::Import { r#as: alias }) => profile_cmd::import(alias.as_deref()),
-        Some(Commands::Clone { source, destination }) => profile_cmd::clone(&source, &destination),
+        Some(Commands::Clone {
+            source,
+            destination,
+        }) => profile_cmd::clone(&source, &destination),
         Some(Commands::Rm { name }) => profile_cmd::remove(&name),
         Some(Commands::Rename { old, new }) => profile_cmd::rename(&old, &new),
         Some(Commands::Login { profile }) => profile_cmd::login(profile.as_deref()).await,
-        Some(Commands::AddKey { profile, slot, source, note }) => {
-            profile_cmd::add_key(&profile, slot, source.as_deref(), note.as_deref())
-        }
+        Some(Commands::AddKey {
+            profile,
+            slot,
+            source,
+            note,
+        }) => profile_cmd::add_key(&profile, slot, source.as_deref(), note.as_deref()),
         Some(Commands::Session { action }) => session_cmd::dispatch(action).await,
         Some(Commands::Daemon { action }) => commands::daemon::dispatch(action).await,
         Some(Commands::AutoSwitch { action }) => commands::auto_switch::dispatch(action).await,
         Some(Commands::Pause { minutes }) => commands::auto_switch::pause(minutes),
-        Some(Commands::Run { profile_session, cmd }) => {
-            commands::run::run_with_profile(&profile_session, &cmd).await
-        }
+        Some(Commands::Run {
+            profile_session,
+            cmd,
+        }) => commands::run::run_with_profile(&profile_session, &cmd).await,
         Some(Commands::Sync) => commands::sync::run(),
         Some(Commands::Stats { profile_session }) => {
             commands::stats::run(profile_session.as_deref())
@@ -372,17 +375,17 @@ async fn main() -> Result<()> {
             }
         }
         Some(Commands::Team { action }) => match action {
-            TeamCommands::Init { remote_url, branch } => {
-                commands::team::init(&remote_url, &branch)
-            }
+            TeamCommands::Init { remote_url, branch } => commands::team::init(&remote_url, &branch),
             TeamCommands::Push => commands::team::push(),
             TeamCommands::Pull { strategy } => commands::team::pull(strategy),
             TeamCommands::Status => commands::team::status(),
         },
         Some(Commands::Templates) => commands::templates::list(),
-        Some(Commands::Init { yes, shell, no_daemon }) => {
-            commands::init::run(yes, shell.as_deref(), !no_daemon).await
-        }
+        Some(Commands::Init {
+            yes,
+            shell,
+            no_daemon,
+        }) => commands::init::run(yes, shell.as_deref(), !no_daemon).await,
         Some(Commands::Completions { shell }) => {
             let mut cmd = Cli::command();
             let name = cmd.get_name().to_string();

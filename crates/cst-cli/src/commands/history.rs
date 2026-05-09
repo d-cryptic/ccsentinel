@@ -9,7 +9,10 @@ pub fn run() -> Result<()> {
         println!("Run `cst use <profile>` to start tracking switches.");
         return Ok(());
     }
-    println!("{:<24} {:<20} {:<20} {}", "TIMESTAMP", "FROM", "TO", "REASON");
+    println!(
+        "{:<24} {:<20} {:<20} {}",
+        "TIMESTAMP", "FROM", "TO", "REASON"
+    );
     println!("{}", "─".repeat(80));
     for ev in &events {
         println!(
@@ -33,13 +36,21 @@ pub fn why() -> Result<()> {
     // Find the most recent event targeting the current profile
     let log = SwitchLog::open();
     if let Ok(events) = log.read_all() {
-        if let Some(ev) = events.iter().rev().find(|e| e.to_profile == cfg.current_profile) {
+        if let Some(ev) = events
+            .iter()
+            .rev()
+            .find(|e| e.to_profile == cfg.current_profile)
+        {
             let reason_detail = match ev.reason {
                 SwitchReason::Manual => "manually activated via `cst use`".to_string(),
-                SwitchReason::RateLimit => format!("auto-switched due to rate limit ({})", ev.detail),
+                SwitchReason::RateLimit => {
+                    format!("auto-switched due to rate limit ({})", ev.detail)
+                }
                 SwitchReason::QuotaRefill => "auto-switched back after quota refill".to_string(),
                 SwitchReason::Schedule => "activated by time-based schedule".to_string(),
-                SwitchReason::AutoDetect => "auto-detected from .cstrc in project directory".to_string(),
+                SwitchReason::AutoDetect => {
+                    "auto-detected from .cstrc in project directory".to_string()
+                }
             };
             println!("Active: {}", cfg.current_ref());
             println!("Reason: {}", reason_detail);
@@ -48,6 +59,9 @@ pub fn why() -> Result<()> {
         }
     }
 
-    println!("Active: {} (reason unknown — no history recorded)", cfg.current_ref());
+    println!(
+        "Active: {} (reason unknown — no history recorded)",
+        cfg.current_ref()
+    );
     Ok(())
 }

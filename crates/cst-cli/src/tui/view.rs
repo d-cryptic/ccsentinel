@@ -30,21 +30,22 @@ pub fn render(f: &mut Frame, state: &AppState) {
 }
 
 fn render_tab_bar(f: &mut Frame, state: &AppState, area: Rect) {
-    let titles: Vec<Line> = Tab::all()
-        .iter()
-        .map(|t| Line::from(t.title()))
-        .collect();
+    let titles: Vec<Line> = Tab::all().iter().map(|t| Line::from(t.title())).collect();
 
     let tabs = Tabs::new(titles)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .title(" CLAUDE SENTINEL "))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" CLAUDE SENTINEL "),
+        )
         .select(state.tab.index())
         .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default()
-            .fg(Color::Black)
-            .bg(Color::White)
-            .add_modifier(Modifier::BOLD));
+        .highlight_style(
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        );
 
     f.render_widget(tabs, area);
 }
@@ -65,16 +66,23 @@ fn render_profiles(f: &mut Frame, state: &AppState, area: Rect) {
         .split(area);
 
     // Profile list
-    let items: Vec<ListItem> = state.profiles.iter().map(|p| {
-        let active_marker = if p.is_active { "▶ " } else { "  " };
-        let label = format!("{}{} ({})", active_marker, p.name, p.auth_type);
-        let style = if p.is_active {
-            Style::default().fg(Color::Black).bg(Color::White).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::White)
-        };
-        ListItem::new(label).style(style)
-    }).collect();
+    let items: Vec<ListItem> = state
+        .profiles
+        .iter()
+        .map(|p| {
+            let active_marker = if p.is_active { "▶ " } else { "  " };
+            let label = format!("{}{} ({})", active_marker, p.name, p.auth_type);
+            let style = if p.is_active {
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::White)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(Color::White)
+            };
+            ListItem::new(label).style(style)
+        })
+        .collect();
 
     let mut list_state = ListState::default();
     list_state.select(Some(state.selected_profile));
@@ -90,7 +98,8 @@ fn render_profiles(f: &mut Frame, state: &AppState, area: Rect) {
         let sessions_str = if p.sessions.is_empty() {
             "  (no sessions)".to_string()
         } else {
-            p.sessions.iter()
+            p.sessions
+                .iter()
                 .map(|s| format!("  • {}", s))
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -121,24 +130,31 @@ fn render_sessions(f: &mut Frame, state: &AppState, area: Rect) {
     let profile_name = state.selected_profile_name().unwrap_or("—");
     let sessions = state.selected_profile_sessions();
 
-    let items: Vec<ListItem> = sessions.iter().enumerate().map(|(i, s)| {
-        let active = state.current_profile == profile_name && state.current_session == s.as_str();
-        let marker = if active { "▶ " } else { "  " };
-        let style = if i == state.selected_session {
-            Style::default().fg(Color::Black).bg(Color::White)
-        } else {
-            Style::default().fg(Color::White)
-        };
-        ListItem::new(format!("{}{}", marker, s)).style(style)
-    }).collect();
+    let items: Vec<ListItem> = sessions
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let active =
+                state.current_profile == profile_name && state.current_session == s.as_str();
+            let marker = if active { "▶ " } else { "  " };
+            let style = if i == state.selected_session {
+                Style::default().fg(Color::Black).bg(Color::White)
+            } else {
+                Style::default().fg(Color::White)
+            };
+            ListItem::new(format!("{}{}", marker, s)).style(style)
+        })
+        .collect();
 
     let mut list_state = ListState::default();
     list_state.select(Some(state.selected_session));
 
     let list = List::new(items)
-        .block(Block::default()
-            .borders(Borders::ALL)
-            .title(format!(" SESSIONS — {} ", profile_name)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!(" SESSIONS — {} ", profile_name)),
+        )
         .highlight_symbol("→ ");
 
     f.render_stateful_widget(list, area, &mut list_state);
@@ -146,7 +162,10 @@ fn render_sessions(f: &mut Frame, state: &AppState, area: Rect) {
 
 fn render_auto_switch(f: &mut Frame, state: &AppState, area: Rect) {
     let mut lines = vec![
-        Line::from(Span::styled(" AUTO-SWITCH STATUS", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            " AUTO-SWITCH STATUS",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
         Line::from(""),
     ];
 
@@ -155,7 +174,9 @@ fn render_auto_switch(f: &mut Frame, state: &AppState, area: Rect) {
     if !has_entries {
         lines.push(Line::from(" No active rate-limit timers."));
         lines.push(Line::from(""));
-        lines.push(Line::from(" Configure: cst auto-switch configure <profile>"));
+        lines.push(Line::from(
+            " Configure: cst auto-switch configure <profile>",
+        ));
         lines.push(Line::from(" Start daemon: cst daemon start"));
     } else {
         for entry in state.scheduler.entries.iter().filter(|e| !e.switched_back) {
@@ -176,8 +197,11 @@ fn render_auto_switch(f: &mut Frame, state: &AppState, area: Rect) {
         }
     }
 
-    let para = Paragraph::new(lines)
-        .block(Block::default().borders(Borders::ALL).title(" AUTO-SWITCH "));
+    let para = Paragraph::new(lines).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" AUTO-SWITCH "),
+    );
     f.render_widget(para, area);
 }
 
@@ -185,13 +209,18 @@ fn render_history(f: &mut Frame, state: &AppState, area: Rect) {
     let items: Vec<ListItem> = if state.history_lines.is_empty() {
         vec![ListItem::new(" No switch history recorded yet.")]
     } else {
-        state.history_lines.iter()
+        state
+            .history_lines
+            .iter()
             .map(|l| ListItem::new(format!(" {}", l)))
             .collect()
     };
 
-    let list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title(" SWITCH HISTORY (last 30) "));
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(" SWITCH HISTORY (last 30) "),
+    );
     f.render_widget(list, area);
 }
 
@@ -209,8 +238,8 @@ fn render_footer(f: &mut Frame, state: &AppState, area: Rect) {
         .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
         .split(area);
 
-    let status_widget = Paragraph::new(format!(" Active: {}", active))
-        .style(Style::default().fg(Color::White));
+    let status_widget =
+        Paragraph::new(format!(" Active: {}", active)).style(Style::default().fg(Color::White));
     let help_widget = Paragraph::new(help)
         .style(Style::default().fg(Color::DarkGray))
         .alignment(Alignment::Right);

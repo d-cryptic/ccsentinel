@@ -6,7 +6,10 @@ pub async fn dispatch(action: crate::DaemonCommands) -> Result<()> {
     match action {
         crate::DaemonCommands::Start => start().await,
         crate::DaemonCommands::Stop => stop(),
-        crate::DaemonCommands::Restart => { stop()?; start().await }
+        crate::DaemonCommands::Restart => {
+            stop()?;
+            start().await
+        }
         crate::DaemonCommands::Status => status(),
         crate::DaemonCommands::Logs => logs(),
     }
@@ -59,7 +62,10 @@ pub fn logs() -> Result<()> {
         println!("No switch events recorded yet.");
         return Ok(());
     }
-    println!("{:<24} {:<20} {:<20} {}", "TIMESTAMP", "FROM", "TO", "REASON");
+    println!(
+        "{:<24} {:<20} {:<20} {}",
+        "TIMESTAMP", "FROM", "TO", "REASON"
+    );
     println!("{}", "─".repeat(80));
     for ev in &events {
         println!(

@@ -56,7 +56,10 @@ pub fn status(dir: &str) -> Result<()> {
             if current == format!("{}:{}", r.profile, session) {
                 println!("Status  : already active");
             } else {
-                println!("Status  : would switch from {} → {}:{}", current, r.profile, session);
+                println!(
+                    "Status  : would switch from {} → {}:{}",
+                    current, r.profile, session
+                );
             }
         }
     }

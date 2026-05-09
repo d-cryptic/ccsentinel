@@ -85,8 +85,9 @@ impl TeamSyncConfig {
     /// Load from `~/.claude-sentinel/team-sync.toml`.
     pub fn load() -> Result<Self> {
         let path = config_path();
-        let content = std::fs::read_to_string(&path)
-            .with_context(|| format!("team sync not configured — run: cst team init <remote-url>"))?;
+        let content = std::fs::read_to_string(&path).with_context(|| {
+            format!("team sync not configured — run: cst team init <remote-url>")
+        })?;
         Ok(toml::from_str(&content)?)
     }
 
@@ -136,7 +137,14 @@ pub fn init(remote_url: &str, branch: &str) -> Result<TeamSyncConfig> {
         println!("Cloning {} …", remote_url);
         // Shallow clone; it's OK if the repo is empty
         let status = Command::new("git")
-            .args(["clone", "--depth=1", "--branch", branch, remote_url, &repo.to_string_lossy()])
+            .args([
+                "clone",
+                "--depth=1",
+                "--branch",
+                branch,
+                remote_url,
+                &repo.to_string_lossy(),
+            ])
             .status();
 
         match status {
@@ -182,10 +190,7 @@ pub fn push() -> Result<()> {
     let synced: Vec<String> = profiles
         .iter()
         .filter(|p| cfg.should_sync(&p.name))
-        .map(|p| {
-            copy_profile_to_repo(&p.name, &profiles_dir, &repo)
-                .map(|_| p.name.clone())
-        })
+        .map(|p| copy_profile_to_repo(&p.name, &profiles_dir, &repo).map(|_| p.name.clone()))
         .collect::<Result<_>>()?;
 
     if synced.is_empty() {
@@ -210,7 +215,11 @@ pub fn push() -> Result<()> {
     git_commit(&repo, &cfg, &msg)?;
     git(&repo, &["push", "origin", &cfg.branch])?;
 
-    println!("✓ Pushed {} profile(s): {}", synced.len(), synced.join(", "));
+    println!(
+        "✓ Pushed {} profile(s): {}",
+        synced.len(),
+        synced.join(", ")
+    );
     Ok(())
 }
 
@@ -231,7 +240,10 @@ pub fn pull_with_strategy(strategy: Option<MergeStrategy>) -> Result<()> {
     ensure_repo_exists(&repo, &cfg)?;
 
     git(&repo, &["fetch", "origin", &cfg.branch])?;
-    git(&repo, &["reset", "--hard", &format!("origin/{}", cfg.branch)])?;
+    git(
+        &repo,
+        &["reset", "--hard", &format!("origin/{}", cfg.branch)],
+    )?;
 
     // Copy from repo into local profiles
     let profiles_dir = repo.join("profiles");
@@ -281,7 +293,13 @@ pub fn status() -> Result<()> {
 
     // Last commit
     let last = Command::new("git")
-        .args(["-C", &repo.to_string_lossy(), "log", "-1", "--format=%ci %s"])
+        .args([
+            "-C",
+            &repo.to_string_lossy(),
+            "log",
+            "-1",
+            "--format=%ci %s",
+        ])
         .output()?;
     if last.status.success() {
         println!("Last   : {}", String::from_utf8_lossy(&last.stdout).trim());
@@ -324,10 +342,7 @@ const SYNC_FILES: &[&str] = &[
 ];
 
 /// Per-session files that are safe to sync.
-const SESSION_SYNC_FILES: &[&str] = &[
-    "settings-override.json",
-    "env.toml",
-];
+const SESSION_SYNC_FILES: &[&str] = &["settings-override.json", "env.toml"];
 
 fn copy_profile_to_repo(name: &str, profiles_dir: &Path, repo: &Path) -> Result<()> {
     let src = profiles_dir.join(name);
@@ -415,10 +430,7 @@ fn copy_file_with_strategy(remote: &Path, local: &Path, strategy: &MergeStrategy
             if !local.exists() {
                 // No local file — just copy.
                 std::fs::copy(remote, local)?;
-            } else if remote
-                .extension()
-                .map_or(false, |ext| ext == "json")
-            {
+            } else if remote.extension().map_or(false, |ext| ext == "json") {
                 // Deep merge JSON: local is base, remote is overlay (remote wins on scalars).
                 let mut base = merge::load_json(local)?;
                 let overlay = merge::load_json(remote)?;
@@ -578,7 +590,8 @@ mod tests {
         };
         let path = dir.path().join("team-sync.toml");
         std::fs::write(&path, toml::to_string_pretty(&cfg).unwrap()).unwrap();
-        let loaded: TeamSyncConfig = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        let loaded: TeamSyncConfig =
+            toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(loaded.remote_url, cfg.remote_url);
         assert_eq!(loaded.branch, cfg.branch);
         assert_eq!(loaded.include_profiles, cfg.include_profiles);
@@ -657,7 +670,11 @@ mod tests {
     fn session_files_sync_copies_env_toml_not_stats() {
         let src_root = TempDir::new().unwrap();
         let repo_root = TempDir::new().unwrap();
-        let session_src = src_root.path().join("work").join("sessions").join("backend");
+        let session_src = src_root
+            .path()
+            .join("work")
+            .join("sessions")
+            .join("backend");
         std::fs::create_dir_all(&session_src).unwrap();
         std::fs::write(session_src.join("env.toml"), "[env]").unwrap();
         std::fs::write(session_src.join("settings-override.json"), "{}").unwrap();
@@ -665,11 +682,25 @@ mod tests {
 
         copy_profile_to_repo("work", src_root.path(), repo_root.path()).unwrap();
 
-        let repo_session = repo_root.path().join("profiles").join("work").join("sessions").join("backend");
-        assert!(repo_session.join("env.toml").exists(), "env.toml should be synced");
-        assert!(repo_session.join("settings-override.json").exists(), "settings-override should be synced");
+        let repo_session = repo_root
+            .path()
+            .join("profiles")
+            .join("work")
+            .join("sessions")
+            .join("backend");
+        assert!(
+            repo_session.join("env.toml").exists(),
+            "env.toml should be synced"
+        );
+        assert!(
+            repo_session.join("settings-override.json").exists(),
+            "settings-override should be synced"
+        );
         // stats.json is private usage data — must NOT be synced
-        assert!(!repo_session.join("stats.json").exists(), "stats.json must not be synced");
+        assert!(
+            !repo_session.join("stats.json").exists(),
+            "stats.json must not be synced"
+        );
     }
 
     #[test]
@@ -686,7 +717,10 @@ mod tests {
             merge_strategy: MergeStrategy::default(),
         };
         assert!(cfg.should_sync("work"));
-        assert!(!cfg.should_sync("personal"), "exclude must take precedence over include");
+        assert!(
+            !cfg.should_sync("personal"),
+            "exclude must take precedence over include"
+        );
     }
 
     #[test]
@@ -717,10 +751,26 @@ mod tests {
         assert!(SYNC_FILES.contains(&"auto-switch.toml"));
         // Negative: credential-adjacent names must never appear
         for file in SYNC_FILES {
-            assert!(!file.contains("key"), "SYNC_FILES must not contain key files: {}", file);
-            assert!(!file.contains("enc"), "SYNC_FILES must not contain encrypted files: {}", file);
-            assert!(!file.contains("oauth"), "SYNC_FILES must not contain oauth files: {}", file);
-            assert!(!file.contains("secret"), "SYNC_FILES must not contain secret files: {}", file);
+            assert!(
+                !file.contains("key"),
+                "SYNC_FILES must not contain key files: {}",
+                file
+            );
+            assert!(
+                !file.contains("enc"),
+                "SYNC_FILES must not contain encrypted files: {}",
+                file
+            );
+            assert!(
+                !file.contains("oauth"),
+                "SYNC_FILES must not contain oauth files: {}",
+                file
+            );
+            assert!(
+                !file.contains("secret"),
+                "SYNC_FILES must not contain secret files: {}",
+                file
+            );
         }
     }
 
@@ -900,7 +950,10 @@ mod tests {
         };
 
         // Create "repo" profile dir
-        let repo_profile = data_dir.join("team-sync-repo").join("profiles").join("work");
+        let repo_profile = data_dir
+            .join("team-sync-repo")
+            .join("profiles")
+            .join("work");
         std::fs::create_dir_all(&repo_profile).unwrap();
         std::fs::write(repo_profile.join("profile.toml"), "name = \"remote\"").unwrap();
         std::fs::write(repo_profile.join("settings-override.json"), r#"{"a":1}"#).unwrap();
@@ -941,7 +994,11 @@ mod tests {
             strategy: MergeStrategy,
         }
 
-        for variant in [MergeStrategy::Theirs, MergeStrategy::Ours, MergeStrategy::Merge] {
+        for variant in [
+            MergeStrategy::Theirs,
+            MergeStrategy::Ours,
+            MergeStrategy::Merge,
+        ] {
             let w = Wrapper {
                 strategy: variant.clone(),
             };

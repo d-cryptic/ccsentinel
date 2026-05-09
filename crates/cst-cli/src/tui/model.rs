@@ -97,7 +97,9 @@ impl AppState {
 
     /// Currently highlighted profile name.
     pub fn selected_profile_name(&self) -> Option<&str> {
-        self.profiles.get(self.selected_profile).map(|p| p.name.as_str())
+        self.profiles
+            .get(self.selected_profile)
+            .map(|p| p.name.as_str())
     }
 
     /// Currently highlighted sessions for selected profile.
@@ -160,27 +162,44 @@ impl AppState {
 fn load_profile_rows(cfg: &GlobalConfig) -> Vec<ProfileRow> {
     let mgr = ProfileManager::new(platform::profiles_dir());
     let profiles = mgr.list().unwrap_or_default();
-    profiles.into_iter().map(|p| {
-        let profile_dir = platform::profile_dir(&p.name);
-        let auth_type = format!("{}", p.auth_type);
-        let smgr = SessionManager::new(profile_dir.join("sessions"));
-        let sessions = smgr.list().unwrap_or_default()
-            .into_iter().map(|s| s.name).collect();
-        let is_active = p.name == cfg.current_profile;
-        ProfileRow { name: p.name, auth_type, sessions, is_active }
-    }).collect()
+    profiles
+        .into_iter()
+        .map(|p| {
+            let profile_dir = platform::profile_dir(&p.name);
+            let auth_type = format!("{}", p.auth_type);
+            let smgr = SessionManager::new(profile_dir.join("sessions"));
+            let sessions = smgr
+                .list()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|s| s.name)
+                .collect();
+            let is_active = p.name == cfg.current_profile;
+            ProfileRow {
+                name: p.name,
+                auth_type,
+                sessions,
+                is_active,
+            }
+        })
+        .collect()
 }
 
 fn load_history_lines() -> Vec<String> {
     let log = SwitchLog::open();
-    log.last_n(30).unwrap_or_default()
+    log.last_n(30)
+        .unwrap_or_default()
         .into_iter()
-        .map(|ev| format!(
-            "{} │ {}:{} → {}:{} │ {}",
-            ev.timestamp.format("%m-%d %H:%M"),
-            ev.from_profile, ev.from_session,
-            ev.to_profile, ev.to_session,
-            ev.reason,
-        ))
+        .map(|ev| {
+            format!(
+                "{} │ {}:{} → {}:{} │ {}",
+                ev.timestamp.format("%m-%d %H:%M"),
+                ev.from_profile,
+                ev.from_session,
+                ev.to_profile,
+                ev.to_session,
+                ev.reason,
+            )
+        })
         .collect()
 }

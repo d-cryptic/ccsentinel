@@ -12,7 +12,7 @@ const RATE_LIMIT_PATTERNS: &[&str] = &[
     "overloaded",
     "usage limit reached",
     "usage_limit_reached",
-    "api_error",          // Claude Code wraps 429s as api_error in history
+    "api_error", // Claude Code wraps 429s as api_error in history
 ];
 
 /// Returns `true` if the given line contains a rate-limit signal.
@@ -44,7 +44,9 @@ mod tests {
     #[test]
     fn test_detects_rate_limit_text() {
         assert!(is_rate_limit_line("Error: rate limit exceeded"));
-        assert!(is_rate_limit_line(r#"{"error":"rate_limit","message":"..."}"#));
+        assert!(is_rate_limit_line(
+            r#"{"error":"rate_limit","message":"..."}"#
+        ));
         assert!(is_rate_limit_line("HTTP 429 Too Many Requests"));
         assert!(is_rate_limit_line("quota exceeded for this hour"));
         assert!(is_rate_limit_line("Usage limit reached for today"));

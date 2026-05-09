@@ -20,7 +20,10 @@ impl VertexConfig {
     pub fn env_vars(&self) -> Result<EnvMap> {
         let mut map = EnvMap::new();
         map.insert("CLAUDE_CODE_USE_VERTEX".to_string(), "1".to_string());
-        map.insert("ANTHROPIC_VERTEX_PROJECT_ID".to_string(), self.project_id.clone());
+        map.insert(
+            "ANTHROPIC_VERTEX_PROJECT_ID".to_string(),
+            self.project_id.clone(),
+        );
         map.insert("CLOUD_ML_REGION".to_string(), self.region.clone());
         if let Some(ref creds) = self.credentials_file {
             map.insert("GOOGLE_APPLICATION_CREDENTIALS".to_string(), creds.clone());
@@ -61,7 +64,10 @@ mod tests {
             credentials_file: Some("/path/to/creds.json".into()),
         };
         let vars = cfg.env_vars().unwrap();
-        assert_eq!(vars["GOOGLE_APPLICATION_CREDENTIALS"], "/path/to/creds.json");
+        assert_eq!(
+            vars["GOOGLE_APPLICATION_CREDENTIALS"],
+            "/path/to/creds.json"
+        );
     }
 
     #[test]

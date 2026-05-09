@@ -204,7 +204,10 @@ mod tests {
     #[test]
     fn test_env_exports_bash_format() {
         let mut vars = HashMap::new();
-        vars.insert("CLAUDE_CONFIG_DIR".to_string(), "/home/user/.claude-sentinel/...".to_string());
+        vars.insert(
+            "CLAUDE_CONFIG_DIR".to_string(),
+            "/home/user/.claude-sentinel/...".to_string(),
+        );
         let output = env_exports(&vars, &ShellKind::Bash);
         assert!(output.contains("export CLAUDE_CONFIG_DIR="));
     }

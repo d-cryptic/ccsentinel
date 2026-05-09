@@ -42,7 +42,11 @@ pub fn list(profile: Option<&str>) -> Result<()> {
     for s in &sessions {
         let active = current.current_profile == profile && current.current_session == s.name;
         let marker = if active { "✓" } else { " " };
-        let tag = if s.description.is_empty() { String::new() } else { format!(" — {}", s.description) };
+        let tag = if s.description.is_empty() {
+            String::new()
+        } else {
+            format!(" — {}", s.description)
+        };
         println!("[{marker}] {}{tag}", s.name);
     }
     Ok(())
