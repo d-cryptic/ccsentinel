@@ -5,6 +5,38 @@
 
 use std::path::PathBuf;
 
+/// Resolve the user's home directory using multiple fallback sources.
+///
+/// Tries in order:
+/// 1. `dirs::home_dir()` (reads `$HOME` on Unix, `USERPROFILE`/`HOMEDRIVE`+`HOMEPATH` on Windows)
+/// 2. `$HOME` env var directly — on Unix this is redundant because `dirs` already reads `$HOME`,
+///    but provides a safety net for non-standard platforms or future `dirs` crate changes.
+/// 3. `$USERPROFILE` on Windows (belt-and-suspenders).
+/// 4. Panics with an actionable message.
+///
+/// Note: `global_claude_dir()` and `global_claude_json()` have no env override (unlike
+/// `data_dir()` which checks `$CST_DATA_DIR`). If you need to redirect the Claude config
+/// location in tests or containers, set `$HOME` before calling those functions.
+fn resolve_home_dir() -> PathBuf {
+    if let Some(h) = dirs::home_dir() {
+        return h;
+    }
+    // On Unix, dirs::home_dir() already reads $HOME, so this arm only fires on
+    // non-standard platforms or if the dirs crate behaviour changes.
+    if let Ok(h) = std::env::var("HOME") {
+        return PathBuf::from(h);
+    }
+    #[cfg(windows)]
+    if let Ok(h) = std::env::var("USERPROFILE") {
+        return PathBuf::from(h);
+    }
+    panic!(
+        "claude-sentinel: cannot determine the home directory. \
+         Set $HOME (Unix) or $USERPROFILE (Windows), \
+         or set $CST_DATA_DIR to an absolute path to redirect the sentinel data directory."
+    )
+}
+
 /// Root data directory for claude-sentinel.
 ///
 /// Checks the `CST_DATA_DIR` environment variable first, allowing
@@ -18,7 +50,7 @@ pub fn data_dir() -> PathBuf {
         return PathBuf::from(d);
     }
     dirs::data_local_dir()
-        .unwrap_or_else(|| dirs::home_dir().expect("home dir must exist"))
+        .unwrap_or_else(resolve_home_dir)
         .join("claude-sentinel")
 }
 
@@ -44,16 +76,12 @@ pub fn claude_config_dir(profile: &str, session: &str) -> PathBuf {
 
 /// Global `~/.claude/` directory (shared base config).
 pub fn global_claude_dir() -> PathBuf {
-    dirs::home_dir()
-        .expect("home dir must exist")
-        .join(".claude")
+    resolve_home_dir().join(".claude")
 }
 
 /// Global `~/.claude.json` OAuth credentials file.
 pub fn global_claude_json() -> PathBuf {
-    dirs::home_dir()
-        .expect("home dir must exist")
-        .join(".claude.json")
+    resolve_home_dir().join(".claude.json")
 }
 
 /// Global `~/.claude-sentinel/config.toml` — current state.
