@@ -32,11 +32,15 @@ export default function App() {
   return (
     <div className="app-shell">
       {/* Tab bar */}
-      <div className="tab-bar">
+      <div className="tab-bar" role="tablist" aria-label="Main navigation">
         <div className="tab-bar-title">🛡 SENTINEL</div>
         {TABS.map((t) => (
           <button
             key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            aria-controls={`tabpanel-${t.id}`}
+            id={`tab-${t.id}`}
             className={`tab${tab === t.id ? " active" : ""}`}
             onClick={() => setTab(t.id)}
           >
@@ -59,7 +63,12 @@ export default function App() {
       </div>
 
       {/* Content */}
-      <div className="tab-content">
+      <div
+        className="tab-content"
+        role="tabpanel"
+        id={`tabpanel-${tab}`}
+        aria-labelledby={`tab-${tab}`}
+      >
         {tab === "profiles" && <ProfileManager />}
         {tab === "sessions" && <SessionGrid />}
         {tab === "auto-switch" && <AutoSwitchConfig />}

@@ -36,13 +36,20 @@ export function SessionGrid() {
             {p.sessions.map((s) => {
               const isActive = active.profile === p.name && active.session === s;
               return (
-                <div
+                <button
                   key={s}
                   className={`card${isActive ? " active" : ""}`}
+                  aria-pressed={isActive}
+                  aria-label={`Switch to session ${s} in profile ${p.name}`}
                   style={{
                     minWidth: 160,
                     cursor: "pointer",
                     userSelect: "none",
+                    textAlign: "left",
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    font: "inherit",
                   }}
                   onClick={() => switchTo(p.name, s)}
                 >
@@ -69,7 +76,7 @@ export function SessionGrid() {
                       CURRENT SESSION
                     </div>
                   )}
-                </div>
+                </button>
               );
             })}
 

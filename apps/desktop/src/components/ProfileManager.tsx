@@ -40,15 +40,18 @@ export function ProfileManager() {
         </div>
 
         {profiles.map((p) => (
-          <div
+          <button
             key={p.name}
+            role="option"
+            aria-selected={selected === p.name || (!selected && p.is_active)}
             className={`list-item${selected === p.name || (!selected && p.is_active) ? " selected" : ""}`}
+            style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
             onClick={() => { setSelected(p.name); setConfirmDelete(null); }}
           >
             {p.is_active && <span>▶</span>}
             <span style={{ flex: 1 }}>{p.name}</span>
             <span className="badge">{p.auth_type}</span>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -149,9 +152,20 @@ export function ProfileManager() {
 
       {/* New profile modal */}
       {showNew && (
-        <div className="modal-overlay" onClick={() => setShowNew(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-title">New Profile</div>
+        <div
+          className="modal-overlay"
+          onClick={() => setShowNew(false)}
+          onKeyDown={(e) => e.key === "Escape" && setShowNew(false)}
+          role="presentation"
+        >
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-profile-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-title" id="new-profile-title">New Profile</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div>
                 <div className="label" style={{ marginBottom: 4 }}>
