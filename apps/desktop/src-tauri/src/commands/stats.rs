@@ -43,7 +43,7 @@ pub fn get_stats(
             }
         }
         let profile_dir = platform::profile_dir(&p.name);
-        let smgr = SessionManager::new(profile_dir);
+        let smgr = SessionManager::new(&profile_dir);
         let sessions = smgr.list().unwrap_or_default();
 
         for s in &sessions {
