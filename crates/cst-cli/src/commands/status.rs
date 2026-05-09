@@ -1,6 +1,5 @@
 use anyhow::Result;
-use cst_core::platform;
-use cst_core::GlobalConfig;
+use cst_core::{platform, validate_profile_name, validate_session_name, GlobalConfig};
 
 pub fn run() -> Result<()> {
     let cfg = GlobalConfig::load()?;
@@ -8,6 +7,8 @@ pub fn run() -> Result<()> {
         println!("No active profile. Run: cst use <profile>");
         return Ok(());
     }
+    validate_profile_name(&cfg.current_profile)?;
+    validate_session_name(&cfg.current_session)?;
     let profile_dir = platform::profile_dir(&cfg.current_profile);
     let profile_toml = profile_dir.join("profile.toml");
     let auth_type = if profile_toml.exists() {

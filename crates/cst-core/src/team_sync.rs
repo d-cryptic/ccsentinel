@@ -551,6 +551,11 @@ pub fn detect_conflicts(cfg: &TeamSyncConfig) -> Result<Vec<String>> {
     for entry in std::fs::read_dir(&repo_profiles)? {
         let entry = entry?;
         let profile_name = entry.file_name().to_string_lossy().to_string();
+        // Reject traversal attempts — mirrors the guard in pull_with_strategy.
+        if let Err(e) = crate::profile::validate_profile_name(&profile_name) {
+            tracing::warn!("skipping remote profile {profile_name:?} in conflict check: {e}");
+            continue;
+        }
         if !cfg.should_sync(&profile_name) {
             continue;
         }

@@ -7,6 +7,7 @@ use anyhow::Result;
 use cst_core::{
     auto_switch::scheduler::SchedulerState, config::GlobalConfig, history_parser, platform,
     profile::ProfileManager, session::SessionManager, stats::SessionStats,
+    validate_profile_name, validate_session_name,
 };
 
 pub fn remaining() -> Result<()> {
@@ -16,6 +17,9 @@ pub fn remaining() -> Result<()> {
         println!("No active profile. Run: cst use <profile>");
         return Ok(());
     }
+
+    validate_profile_name(&cfg.current_profile)?;
+    validate_session_name(&cfg.current_session)?;
 
     let profile = &cfg.current_profile;
     let session = &cfg.current_session;
