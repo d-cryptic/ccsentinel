@@ -9,7 +9,8 @@
     "cargo-nextest@latest",
     "cargo-watch@latest",
     "cargo-audit@latest",
-    "git-cliff@latest"
+    "git-cliff@latest",
+    "git@latest"
   ],
   "shell": {
     "init_hook": [
@@ -18,16 +19,16 @@
       "echo '✓ claude-sentinel dev environment ready'"
     ],
     "scripts": {
-      "test": "cargo nextest run",
-      "test:watch": "cargo watch -x 'nextest run'",
-      "build": "cargo build",
+      "test":          "cargo nextest run",
+      "test:watch":    "cargo watch -x 'nextest run'",
+      "build":         "cargo build",
       "build:release": "cargo build --release",
-      "install:cli": "cargo install --path crates/cst-cli",
-      "lint": "cargo clippy --all -- -D warnings",
-      "fmt": "cargo fmt --all",
-      "audit": "cargo audit",
-      "dev:app": "cd apps/desktop && bun run tauri dev",
-      "changelog": "git-cliff -o CHANGELOG.md"
+      "install:cli":   "cargo install --path crates/cst-cli",
+      "lint":          "cargo clippy --all -- -D warnings",
+      "fmt":           "cargo fmt --all",
+      "audit":         "cargo audit",
+      "dev:app":       "cd apps/desktop && bun run tauri dev",
+      "changelog":     "git-cliff -o CHANGELOG.md"
     }
   }
 }
