@@ -134,15 +134,36 @@ pub async fn run_daemon() -> Result<()> {
     }
 }
 
+/// Read the last `max_bytes` of a file, returning a String.
+///
+/// History files can grow to hundreds of MB; we only need the most recent
+/// lines, so we seek near the end rather than loading the whole file.
+///
+/// Non-UTF-8 bytes (e.g. from user source files embedded in tool results)
+/// are replaced with the Unicode replacement character so detection is never
+/// silenced by a bad byte sequence.
+fn read_tail(path: &std::path::Path, max_bytes: u64) -> Result<String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let mut f = std::fs::File::open(path)?;
+    let len = f.metadata()?.len();
+    let start = len.saturating_sub(max_bytes);
+    f.seek(SeekFrom::Start(start))?;
+    let mut buf = Vec::new();
+    f.read_to_end(&mut buf)?;
+    Ok(String::from_utf8_lossy(&buf).into_owned())
+}
+
 /// Called when a `.jsonl` file changes — scan new lines for rate-limit patterns.
 fn handle_file_change(
     path: &std::path::Path,
     scheduler: &mut SchedulerState,
     switch_log: &SwitchLog,
 ) -> Result<()> {
-    let contents = std::fs::read_to_string(path)?;
-    // Scan last 20 lines (most recent activity)
-    let lines: Vec<&str> = contents.lines().rev().take(20).collect();
+    // Read only the last 8 KiB — avoids loading large history files into memory.
+    // At ~200 bytes per JSON line this covers ~40 recent lines, well beyond the 20 we inspect.
+    let tail = read_tail(path, 8 * 1024)?;
+    // Scan last 20 complete lines (skip the possibly-partial first line at the seek boundary)
+    let lines: Vec<&str> = tail.lines().rev().take(20).collect();
     for line in lines {
         if detector::is_rate_limit_line(line) {
             let reason = detector::extract_reason(line);
@@ -303,7 +324,12 @@ pub fn is_running() -> bool {
     }
 }
 
-/// Stop the daemon by sending SIGTERM to the PID in the PID file.
+/// Stop the daemon by sending SIGTERM and waiting for the process to exit.
+///
+/// The PID file is only removed after the process has actually terminated
+/// (or a 5-second timeout elapses), preventing a TOCTOU race where a
+/// concurrent `cst daemon start` sees no PID file and spawns a second daemon
+/// before the first one has exited.
 pub fn stop_daemon() -> Result<()> {
     let path = pid_file();
     if !path.exists() {
@@ -319,10 +345,24 @@ pub fn stop_daemon() -> Result<()> {
                 anyhow::bail!("failed to send SIGTERM to PID {pid}");
             }
         }
+
+        // Poll until the process exits or a 5-second timeout elapses.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        loop {
+            let still_running = unsafe { libc::kill(pid as libc::pid_t, 0) == 0 };
+            if !still_running {
+                break;
+            }
+            if std::time::Instant::now() >= deadline {
+                tracing::warn!("daemon PID {pid} did not exit within 5 s after SIGTERM");
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
     }
     #[cfg(not(unix))]
     {
-        tracing::warn!("daemon stop not implemented on this platform (PID: {pid})");
+        tracing::warn!("daemon stop not fully implemented on this platform (PID: {pid})");
     }
 
     std::fs::remove_file(&path)?;
