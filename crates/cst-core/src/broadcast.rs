@@ -117,14 +117,6 @@ pub fn check_broadcast(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
-
-    fn with_temp_data_dir<F: FnOnce()>(f: F) {
-        // BroadcastSwitch uses platform::data_dir() which reads dirs crate.
-        // We can't easily redirect it, so just verify logic with check_broadcast().
-        let _ = env::var("HOME"); // ensure HOME is set
-        f()
-    }
 
     #[test]
     fn test_check_broadcast_matching_profile() {

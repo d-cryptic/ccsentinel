@@ -24,7 +24,7 @@ pub fn new(name: &str, tag: Option<&str>) -> Result<()> {
     validate_session_name(name)?;
     let profile = current_profile()?;
     let mgr = SessionManager::new(platform::profile_dir(&profile));
-    let session = mgr.create(name, &platform::global_claude_dir())?;
+    mgr.create(name, &platform::global_claude_dir())?;
     if let Some(desc) = tag {
         mgr.tag(name, desc)?;
     }

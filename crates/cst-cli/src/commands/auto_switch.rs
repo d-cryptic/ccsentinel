@@ -17,7 +17,7 @@ pub fn configure(profile: &str) -> Result<()> {
     if !profile_dir.exists() {
         anyhow::bail!("profile '{profile}' not found");
     }
-    let mut cfg = AutoSwitchConfig::load(&profile_dir)?;
+    let cfg = AutoSwitchConfig::load(&profile_dir)?;
     println!("Configuring auto-switch for profile: {profile}");
     println!("  fallback_chain: {:?}", cfg.fallback_chain);
     println!("  estimate_minutes: {}", cfg.estimate_minutes);

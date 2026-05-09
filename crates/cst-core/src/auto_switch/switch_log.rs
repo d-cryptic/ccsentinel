@@ -116,6 +116,8 @@ impl SwitchLog {
         f.read_to_end(&mut buf)?;
         let tail = String::from_utf8_lossy(&buf);
 
+        // Any partial line at the seek boundary will fail JSON deserialization
+        // and be silently dropped by filter_map — this is intentional and safe.
         let mut events: Vec<SwitchEvent> = tail
             .lines()
             .filter(|l| !l.trim().is_empty())

@@ -3,7 +3,7 @@
 use cst_core::auto_switch::daemon::write_pending_switch;
 use cst_core::config::GlobalConfig;
 use cst_core::platform;
-use cst_core::profile::{AuthType, Profile, ProfileManager};
+use cst_core::profile::{AuthType, ProfileManager};
 use cst_core::{validate_profile_name, validate_session_name};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;

@@ -7,7 +7,7 @@ use std::str::FromStr;
 pub async fn new(name: &str, auth: &str, template: Option<&str>) -> Result<()> {
     let auth_type = AuthType::from_str(auth)?;
     let mgr = ProfileManager::default();
-    let profile = mgr.create(name, auth_type.clone())?;
+    mgr.create(name, auth_type.clone())?;
     println!("✓ Created profile '{name}' [{auth_type}]");
 
     // Apply template settings if specified

@@ -89,11 +89,6 @@ pub fn global_config_path() -> PathBuf {
     data_dir().join("config.toml")
 }
 
-/// Pending-switch file: daemon writes here, shell precmd reads and evals.
-pub fn pending_switch_path() -> PathBuf {
-    data_dir().join("pending-switch")
-}
-
 /// Create all required directories (called on first run / init).
 pub fn ensure_dirs_exist() -> anyhow::Result<()> {
     std::fs::create_dir_all(data_dir())?;

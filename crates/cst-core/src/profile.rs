@@ -174,6 +174,7 @@ impl ProfileManager {
     /// Returns an error if the profile is currently active, preventing
     /// `GlobalConfig` from pointing to a nonexistent profile.
     pub fn delete(&self, name: &str) -> Result<()> {
+        validate_profile_name(name)?;
         let dir = self.profile_dir(name);
         if !dir.exists() {
             bail!("profile '{name}' not found");

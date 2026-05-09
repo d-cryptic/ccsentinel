@@ -179,18 +179,33 @@ pub(crate) fn is_valid_env_key(key: &str) -> bool {
 
 /// Generate env export lines (emitted by `cst _env <profile:session>`).
 /// The shell function eval's this output.
+///
+/// An empty value (`""`) is treated as a signal to **unset** the variable
+/// rather than export it as empty. This is used for `ANTHROPIC_API_KEY` when
+/// activating an OAuth profile, ensuring the key is fully absent from the
+/// Claude Code process rather than set to an empty string (which `std::env::var`
+/// would still return as `Ok("")`).
 pub fn env_exports(env_vars: &HashMap<String, String>, shell: &ShellKind) -> String {
     let mut lines = Vec::new();
     for (key, val) in env_vars {
-        let line = match shell {
-            ShellKind::Zsh | ShellKind::Bash => {
-                format!("export {key}='{}'", shell_escape_single_quote(val))
+        let line = if val.is_empty() {
+            // Unset the variable so it is fully absent from the child process.
+            match shell {
+                ShellKind::Zsh | ShellKind::Bash => format!("unset {key}"),
+                ShellKind::Fish => format!("set -e {key}"),
+                ShellKind::PowerShell => format!("Remove-Item Env:{key} -ErrorAction SilentlyContinue"),
             }
-            ShellKind::Fish => {
-                format!("set -gx {key} '{}'", shell_escape_single_quote(val))
-            }
-            ShellKind::PowerShell => {
-                format!("$env:{key} = '{}'", powershell_escape_single_quote(val))
+        } else {
+            match shell {
+                ShellKind::Zsh | ShellKind::Bash => {
+                    format!("export {key}='{}'", shell_escape_single_quote(val))
+                }
+                ShellKind::Fish => {
+                    format!("set -gx {key} '{}'", shell_escape_single_quote(val))
+                }
+                ShellKind::PowerShell => {
+                    format!("$env:{key} = '{}'", powershell_escape_single_quote(val))
+                }
             }
         };
         lines.push(line);
@@ -250,6 +265,31 @@ mod tests {
         let code = shell_init_code(&ShellKind::Zsh);
         assert!(code.contains("function cst") || code.contains("cst()"));
         assert!(code.contains("_cst_check_switch"));
+    }
+
+    #[test]
+    fn test_env_exports_empty_value_emits_unset_bash() {
+        let mut vars = HashMap::new();
+        vars.insert("ANTHROPIC_API_KEY".to_string(), String::new());
+        let output = env_exports(&vars, &ShellKind::Bash);
+        assert_eq!(output, "unset ANTHROPIC_API_KEY");
+        assert!(!output.contains("export"), "empty value must not export");
+    }
+
+    #[test]
+    fn test_env_exports_empty_value_emits_unset_fish() {
+        let mut vars = HashMap::new();
+        vars.insert("ANTHROPIC_API_KEY".to_string(), String::new());
+        let output = env_exports(&vars, &ShellKind::Fish);
+        assert_eq!(output, "set -e ANTHROPIC_API_KEY");
+    }
+
+    #[test]
+    fn test_env_exports_empty_value_emits_unset_powershell() {
+        let mut vars = HashMap::new();
+        vars.insert("ANTHROPIC_API_KEY".to_string(), String::new());
+        let output = env_exports(&vars, &ShellKind::PowerShell);
+        assert!(output.contains("Remove-Item Env:ANTHROPIC_API_KEY"));
     }
 
     #[test]

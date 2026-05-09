@@ -46,34 +46,37 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
   },
 
   switchTo: async (profile, session) => {
+    set({ loading: true, error: null });
     try {
       await invoke("switch_profile", { profile, session });
       set({ active: { profile, session }, error: null });
       await get().fetch();
     } catch (e) {
-      set({ error: String(e) });
+      set({ error: String(e), loading: false });
       // Re-sync to show actual backend state
       await get().fetch().catch(() => {});
     }
   },
 
   createProfile: async (name, auth_type, template) => {
+    set({ loading: true, error: null });
     try {
       await invoke("create_profile", { name, authType: auth_type, template: template ?? null });
       set({ error: null });
       await get().fetch();
     } catch (e) {
-      set({ error: String(e) });
+      set({ error: String(e), loading: false });
     }
   },
 
   deleteProfile: async (name) => {
+    set({ loading: true, error: null });
     try {
       await invoke("delete_profile", { name });
       set({ error: null });
       await get().fetch();
     } catch (e) {
-      set({ error: String(e) });
+      set({ error: String(e), loading: false });
     }
   },
 }));
