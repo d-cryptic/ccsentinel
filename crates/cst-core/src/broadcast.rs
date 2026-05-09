@@ -191,8 +191,4 @@ mod tests {
         assert!(Utc::now() >= b.expires_at);
     }
 
-    #[test]
-    fn _ignore_with_temp_data_dir() {
-        with_temp_data_dir(|| {});
-    }
 }

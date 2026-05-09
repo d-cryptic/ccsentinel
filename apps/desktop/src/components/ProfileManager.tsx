@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useProfileStore } from "../store/profiles";
 
 export function ProfileManager() {
-  const { profiles, active, switchTo, createProfile, deleteProfile, fetch, error } =
+  const { profiles, active, switchTo, createProfile, deleteProfile, fetch, error, loading } =
     useProfileStore();
   const [selected, setSelected] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -14,7 +14,7 @@ export function ProfileManager() {
   const selectedProfile = profiles.find((p) => p.name === selected) ?? profiles[0];
 
   const handleCreate = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || loading) return;
     await createProfile(newName.trim(), newAuth);
     // Only close the modal if creation succeeded (no error in store)
     if (!useProfileStore.getState().error) {
@@ -136,6 +136,7 @@ export function ProfileManager() {
                 <span style={{ fontSize: 12 }}>Delete "{selectedProfile.name}"?</span>
                 <button
                   className="btn btn-danger btn-sm"
+                  disabled={loading}
                   onClick={async () => {
                     await deleteProfile(selectedProfile.name);
                     // Only clear selection if deletion succeeded
@@ -221,7 +222,7 @@ export function ProfileManager() {
               <button className="btn" onClick={() => setShowNew(false)}>
                 Cancel
               </button>
-              <button className="btn btn-primary" onClick={handleCreate}>
+              <button className="btn btn-primary" onClick={handleCreate} disabled={loading}>
                 Create
               </button>
             </div>

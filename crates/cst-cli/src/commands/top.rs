@@ -166,7 +166,7 @@ impl TopState {
         if let Ok(profiles) = pm.list() {
             for p in profiles {
                 let profile_dir = platform::profile_dir(&p.name);
-                let sm = SessionManager::new(profile_dir.join("sessions"));
+                let sm = SessionManager::new(profile_dir);
                 if let Ok(sessions) = sm.list() {
                     if sessions.is_empty() {
                         self.rows.push(ProfileRow {

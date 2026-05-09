@@ -4,6 +4,7 @@ use cst_core::auto_switch::daemon::write_pending_switch;
 use cst_core::config::GlobalConfig;
 use cst_core::platform;
 use cst_core::profile::{AuthType, Profile, ProfileManager};
+use cst_core::{validate_profile_name, validate_session_name};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -27,7 +28,7 @@ pub fn list_profiles() -> Result<Vec<ProfileDto>, String> {
         .into_iter()
         .map(|p| {
             let profile_dir = platform::profile_dir(&p.name);
-            let smgr = cst_core::session::SessionManager::new(profile_dir.join("sessions"));
+            let smgr = cst_core::session::SessionManager::new(profile_dir);
             let sessions = smgr
                 .list()
                 .unwrap_or_default()
@@ -57,6 +58,8 @@ pub fn get_active() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 pub fn switch_profile(profile: String, session: String) -> Result<(), String> {
+    validate_profile_name(&profile).map_err(|e| e.to_string())?;
+    validate_session_name(&session).map_err(|e| e.to_string())?;
     // Write pending switch for shell
     write_pending_switch(&profile, &session).map_err(|e| e.to_string())?;
 
@@ -83,10 +86,9 @@ pub fn create_profile(
     if let Some(tpl_name) = template {
         if let Some(tpl) = cst_core::templates::find(&tpl_name) {
             let override_path = platform::profile_dir(&name).join("settings-override.json");
-            let _ = std::fs::write(
-                override_path,
-                serde_json::to_string_pretty(&tpl.settings_override).unwrap(),
-            );
+            let json = serde_json::to_string_pretty(&tpl.settings_override)
+                .map_err(|e| e.to_string())?;
+            std::fs::write(override_path, json).map_err(|e| e.to_string())?;
         }
     }
 

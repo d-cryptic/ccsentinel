@@ -167,7 +167,7 @@ fn load_profile_rows(cfg: &GlobalConfig) -> Vec<ProfileRow> {
         .map(|p| {
             let profile_dir = platform::profile_dir(&p.name);
             let auth_type = format!("{}", p.auth_type);
-            let smgr = SessionManager::new(profile_dir.join("sessions"));
+            let smgr = SessionManager::new(profile_dir);
             let sessions = smgr
                 .list()
                 .unwrap_or_default()
