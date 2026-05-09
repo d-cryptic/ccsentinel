@@ -7,10 +7,12 @@
 //! PROJECT_ENV = "staging"
 //! ```
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
+
+use crate::shell::is_valid_env_key;
 
 /// Contents of `env.toml` in a session directory.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -22,13 +24,26 @@ pub struct EnvOverlay {
 
 impl EnvOverlay {
     /// Load from `{session_dir}/env.toml`. Returns empty overlay if the file doesn't exist.
+    ///
+    /// Returns an error if any key is not a valid POSIX environment variable name
+    /// (`[A-Za-z_][A-Za-z0-9_]*`), preventing shell injection via malformed key names.
     pub fn load(session_dir: &Path) -> Result<Self> {
         let path = session_dir.join("env.toml");
         if !path.exists() {
             return Ok(Self::default());
         }
         let contents = std::fs::read_to_string(&path)?;
-        Ok(toml::from_str(&contents)?)
+        let overlay: Self = toml::from_str(&contents)?;
+        for key in overlay.env.keys() {
+            if !is_valid_env_key(key) {
+                bail!(
+                    "env.toml contains invalid env var name {:?} — \
+                     names must match [A-Za-z_][A-Za-z0-9_]*",
+                    key
+                );
+            }
+        }
+        Ok(overlay)
     }
 
     /// Save to `{session_dir}/env.toml`.
@@ -88,5 +103,29 @@ mod tests {
         let mut overlay = EnvOverlay::default();
         overlay.env.insert("FOO".to_string(), "bar".to_string());
         assert_eq!(overlay.vars().get("FOO").map(String::as_str), Some("bar"));
+    }
+
+    #[test]
+    fn test_load_rejects_invalid_key_names() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("env.toml");
+        // A key that would allow shell injection
+        std::fs::write(&path, "[env]\n\"FOO=bar;id\" = \"val\"\n").unwrap();
+        let result = EnvOverlay::load(dir.path());
+        assert!(result.is_err(), "should reject key with shell metacharacters");
+        let msg = result.unwrap_err().to_string();
+        assert!(
+            msg.contains("invalid env var name"),
+            "error message should mention invalid name: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_load_accepts_valid_key_names() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("env.toml");
+        std::fs::write(&path, "[env]\nCLAUDE_TOKEN = \"abc\"\n_PRIVATE = \"val\"\n").unwrap();
+        let overlay = EnvOverlay::load(dir.path()).unwrap();
+        assert_eq!(overlay.env.len(), 2);
     }
 }

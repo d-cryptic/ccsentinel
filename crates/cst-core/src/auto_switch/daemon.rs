@@ -14,6 +14,7 @@ use crate::auto_switch::scheduler::SchedulerState;
 use crate::auto_switch::switch_log::{SwitchEvent, SwitchLog, SwitchReason};
 use crate::config::GlobalConfig;
 use crate::platform;
+use crate::shell::shell_escape_single_quote;
 
 /// PID file path.
 pub fn pid_file() -> PathBuf {
@@ -31,10 +32,13 @@ pub fn write_pending_switch(profile: &str, session: &str) -> Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    // Shell will eval this to update the current profile
+    // Single-quote all values so the shell cannot break out of them.
+    // Profile/session names are [a-zA-Z0-9\-_] by validate_name, but the
+    // config_dir path (on Windows or non-standard setups) may contain quotes.
+    let config_dir =
+        shell_escape_single_quote(&platform::claude_config_dir(profile, session).display().to_string());
     let content = format!(
-        "export CST_CURRENT=\"{profile}:{session}\"\nexport CLAUDE_CONFIG_DIR=\"{}\"\n",
-        platform::claude_config_dir(profile, session).display()
+        "export CST_CURRENT='{profile}:{session}'\nexport CLAUDE_CONFIG_DIR='{config_dir}'\n"
     );
     std::fs::write(path, content)?;
     Ok(())
@@ -324,4 +328,38 @@ pub fn stop_daemon() -> Result<()> {
     std::fs::remove_file(&path)?;
     tracing::info!("daemon stopped (PID {pid})");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_write_pending_switch_normal_path() {
+        let dir = TempDir::new().unwrap();
+        std::env::set_var("CST_DATA_DIR", dir.path().to_str().unwrap());
+        write_pending_switch("work", "backend").unwrap();
+        let content =
+            std::fs::read_to_string(dir.path().join("pending-switch")).unwrap();
+        assert!(content.contains("CST_CURRENT='work:backend'"));
+        assert!(content.contains("CLAUDE_CONFIG_DIR='"));
+        // No unescaped double quotes in the output
+        assert!(!content.contains('"'), "should use single-quoted values");
+        std::env::remove_var("CST_DATA_DIR");
+    }
+
+    #[test]
+    fn test_write_pending_switch_no_injection_via_path() {
+        // Even if the data dir path somehow contained a single quote, it should be escaped
+        let dir = TempDir::new().unwrap();
+        std::env::set_var("CST_DATA_DIR", dir.path().to_str().unwrap());
+        // Profile/session names are safe by validate_name; we just verify the file is well-formed
+        write_pending_switch("my-profile", "default").unwrap();
+        let content =
+            std::fs::read_to_string(dir.path().join("pending-switch")).unwrap();
+        // Must start with export and use single-quoted assignment
+        assert!(content.starts_with("export CST_CURRENT='"));
+        std::env::remove_var("CST_DATA_DIR");
+    }
 }

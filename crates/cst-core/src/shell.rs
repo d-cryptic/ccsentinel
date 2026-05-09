@@ -152,6 +152,31 @@ function cst {
     }
 }
 
+/// Escape a value for use inside single-quoted POSIX shell strings.
+///
+/// Replaces `'` with `'\''` (close quote, escaped literal apostrophe, reopen quote).
+/// Safe for bash, zsh, and fish (fish interprets `\'` outside quotes as a literal `'`).
+pub(crate) fn shell_escape_single_quote(val: &str) -> String {
+    val.replace('\'', r"'\''")
+}
+
+/// Escape a value for use inside PowerShell single-quoted strings.
+/// Replaces `'` with `''` (PowerShell doubling convention).
+fn powershell_escape_single_quote(val: &str) -> String {
+    val.replace('\'', "''")
+}
+
+/// Returns `true` if `key` is a valid POSIX environment variable name.
+/// POSIX names match `[A-Za-z_][A-Za-z0-9_]*`.
+pub(crate) fn is_valid_env_key(key: &str) -> bool {
+    let mut chars = key.chars();
+    match chars.next() {
+        Some(c) if c.is_ascii_alphabetic() || c == '_' => {}
+        _ => return false,
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
+}
+
 /// Generate env export lines (emitted by `cst _env <profile:session>`).
 /// The shell function eval's this output.
 pub fn env_exports(env_vars: &HashMap<String, String>, shell: &ShellKind) -> String {
@@ -159,13 +184,13 @@ pub fn env_exports(env_vars: &HashMap<String, String>, shell: &ShellKind) -> Str
     for (key, val) in env_vars {
         let line = match shell {
             ShellKind::Zsh | ShellKind::Bash => {
-                format!("export {key}='{val}'")
+                format!("export {key}='{}'", shell_escape_single_quote(val))
             }
             ShellKind::Fish => {
-                format!("set -gx {key} '{val}'")
+                format!("set -gx {key} '{}'", shell_escape_single_quote(val))
             }
             ShellKind::PowerShell => {
-                format!("$env:{key} = '{val}'")
+                format!("$env:{key} = '{}'", powershell_escape_single_quote(val))
             }
         };
         lines.push(line);
@@ -225,5 +250,77 @@ mod tests {
         let code = shell_init_code(&ShellKind::Zsh);
         assert!(code.contains("function cst") || code.contains("cst()"));
         assert!(code.contains("_cst_check_switch"));
+    }
+
+    #[test]
+    fn test_shell_escape_no_quotes() {
+        assert_eq!(shell_escape_single_quote("hello"), "hello");
+        assert_eq!(
+            shell_escape_single_quote("/home/user/.config"),
+            "/home/user/.config"
+        );
+    }
+
+    #[test]
+    fn test_shell_escape_single_quote() {
+        assert_eq!(shell_escape_single_quote("it's"), r"it'\''s");
+    }
+
+    #[test]
+    fn test_env_exports_escapes_single_quotes_bash() {
+        let mut vars = HashMap::new();
+        vars.insert("MY_VAR".to_string(), "it's a test".to_string());
+        let output = env_exports(&vars, &ShellKind::Bash);
+        assert!(
+            output.contains(r"'\''"),
+            "should contain escaped single quote"
+        );
+        assert!(
+            !output.contains("'it's"),
+            "must not contain raw unescaped quote"
+        );
+    }
+
+    #[test]
+    fn test_env_exports_escapes_single_quotes_powershell() {
+        let mut vars = HashMap::new();
+        vars.insert("MY_VAR".to_string(), "it's a test".to_string());
+        let output = env_exports(&vars, &ShellKind::PowerShell);
+        assert!(
+            output.contains("it''s"),
+            "should use PowerShell double-quote escaping"
+        );
+    }
+
+    #[test]
+    fn test_env_exports_escapes_single_quotes_fish() {
+        let mut vars = HashMap::new();
+        vars.insert("MY_VAR".to_string(), "it's a test".to_string());
+        let output = env_exports(&vars, &ShellKind::Fish);
+        assert!(
+            output.contains(r"'\''"),
+            "fish should also use the POSIX '\\'' escape"
+        );
+        assert!(
+            !output.contains("'it's"),
+            "must not contain raw unescaped quote"
+        );
+    }
+
+    #[test]
+    fn test_is_valid_env_key_accepts_valid_names() {
+        assert!(is_valid_env_key("FOO"));
+        assert!(is_valid_env_key("_BAR"));
+        assert!(is_valid_env_key("CLAUDE_CODE_MAX_OUTPUT_TOKENS"));
+        assert!(is_valid_env_key("foo123"));
+    }
+
+    #[test]
+    fn test_is_valid_env_key_rejects_invalid_names() {
+        assert!(!is_valid_env_key(""));
+        assert!(!is_valid_env_key("1FOO"));
+        assert!(!is_valid_env_key("FOO=bar;id"));
+        assert!(!is_valid_env_key("FOO BAR"));
+        assert!(!is_valid_env_key("FOO$"));
     }
 }
