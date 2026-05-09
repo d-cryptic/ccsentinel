@@ -91,21 +91,48 @@ pub async fn run_daemon() -> Result<()> {
     tracing::info!("daemon watching for rate limits");
 
     loop {
-        // Poll file-system events (non-blocking)
-        while let Ok(Ok(event)) = rx.try_recv() {
-            for path in &event.paths {
-                if path.extension().map(|e| e == "jsonl").unwrap_or(false) {
-                    if let Err(e) = handle_file_change(path, &mut scheduler, &switch_log) {
-                        tracing::warn!("error processing change to {}: {e}", path.display());
+        // Honour the pause file written by `cst pause`.
+        let pause_path = platform::data_dir().join("auto-switch-paused");
+        let paused = if pause_path.exists() {
+            match std::fs::read_to_string(&pause_path) {
+                Ok(content) if content.trim() == "indefinite" => true,
+                Ok(content) => {
+                    // Check if the resume timestamp has passed.
+                    if let Ok(dt) = content.trim().parse::<chrono::DateTime<chrono::Utc>>() {
+                        chrono::Utc::now() < dt
+                    } else {
+                        false
+                    }
+                }
+                Err(_) => false,
+            }
+        } else {
+            false
+        };
+
+        if !paused {
+            // Poll file-system events (non-blocking)
+            while let Ok(Ok(event)) = rx.try_recv() {
+                for path in &event.paths {
+                    if path.extension().map(|e| e == "jsonl").unwrap_or(false) {
+                        if let Err(e) = handle_file_change(path, &mut scheduler, &switch_log) {
+                            tracing::warn!("error processing change to {}: {e}", path.display());
+                        }
                     }
                 }
             }
+        } else {
+            // Drain events so the channel doesn't fill up while paused.
+            while rx.try_recv().is_ok() {}
+            tracing::debug!("auto-switch paused — skipping event processing");
         }
 
         // Periodic scheduler check (every 60 s)
         if last_scheduler_check.elapsed() >= Duration::from_secs(60) {
-            if let Err(e) = check_scheduler_switchbacks(&mut scheduler, &switch_log) {
-                tracing::warn!("scheduler check error: {e}");
+            if !paused {
+                if let Err(e) = check_scheduler_switchbacks(&mut scheduler, &switch_log) {
+                    tracing::warn!("scheduler check error: {e}");
+                }
             }
             last_scheduler_check = std::time::Instant::now();
         }
@@ -173,6 +200,16 @@ fn trigger_switch(
     // Load this profile's auto-switch config
     let profile_dir = platform::profile_dir(&current_profile);
     let as_cfg = AutoSwitchConfig::load(&profile_dir)?;
+
+    // Warn if the user configured round_robin — it is not yet implemented.
+    if let Some(ref rr) = as_cfg.round_robin {
+        if rr.enabled {
+            tracing::warn!(
+                "round_robin is configured for {current_profile} but is not yet implemented — \
+                 falling back to fallback_chain"
+            );
+        }
+    }
 
     if as_cfg.fallback_chain.is_empty() {
         tracing::info!("no fallback chain configured for {current_profile}, pausing");
@@ -271,6 +308,15 @@ fn check_scheduler_switchbacks(
     let mut cfg = GlobalConfig::load()?;
 
     for profile in pending {
+        // Validate before using as a shell-export value. scheduler.json is
+        // user-owned but tampered entries must not reach write_pending_switch.
+        if let Err(e) = crate::profile::validate_profile_name(&profile) {
+            tracing::warn!("skipping invalid scheduler entry {profile:?}: {e}");
+            scheduler.mark_switched_back(&profile);
+            scheduler.save().ok();
+            continue;
+        }
+
         tracing::info!("quota refilled for {profile}, switching back");
 
         let event = SwitchEvent {

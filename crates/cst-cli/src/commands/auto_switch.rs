@@ -106,10 +106,14 @@ pub fn pause(minutes: Option<u64>) -> Result<()> {
     }
     match minutes {
         Some(m) => {
-            let resume_at = chrono::Utc::now() + chrono::Duration::minutes(m as i64);
+            // Cap to 1 year to prevent u64→i64 silent wrap producing a past timestamp.
+            const MAX_PAUSE_MINUTES: u64 = 60 * 24 * 365;
+            let capped = m.min(MAX_PAUSE_MINUTES) as i64;
+            let resume_at = chrono::Utc::now() + chrono::Duration::minutes(capped);
             std::fs::write(&pause_file, resume_at.to_rfc3339())?;
             println!(
-                "Auto-switch paused for {m} minutes (resumes at {}).",
+                "Auto-switch paused for {} minutes (resumes at {}).",
+                capped,
                 resume_at.format("%H:%M UTC")
             );
         }

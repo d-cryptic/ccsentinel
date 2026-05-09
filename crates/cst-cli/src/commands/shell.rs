@@ -48,14 +48,18 @@ pub fn env_cmd(profile_session: &str) -> Result<()> {
         let profile_toml = profile_dir.join("profile.toml");
         if let Ok(contents) = std::fs::read_to_string(&profile_toml) {
             if let Ok(p) = toml::from_str::<Profile>(&contents) {
-                let _ = p.hooks.run_pre_switch_in();
+                if let Err(e) = p.hooks.run_pre_switch_in() {
+                    tracing::warn!("pre_switch_in hook failed for {profile}: {e}");
+                }
 
                 match activate_profile_auth_with(&profile, Some(&p)) {
                     Ok(auth_vars) => vars.extend(auth_vars),
                     Err(e) => tracing::warn!("auth activation failed for {profile}: {e}"),
                 }
 
-                let _ = p.hooks.run_post_switch_in();
+                if let Err(e) = p.hooks.run_post_switch_in() {
+                    tracing::warn!("post_switch_in hook failed for {profile}: {e}");
+                }
             } else {
                 // Profile file exists but couldn't be parsed — fall back to name-only auth
                 match activate_profile_auth(&profile) {
