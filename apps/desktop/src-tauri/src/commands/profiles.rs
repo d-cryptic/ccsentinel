@@ -104,6 +104,7 @@ pub fn create_profile(
 
 #[tauri::command]
 pub fn delete_profile(name: String) -> Result<(), String> {
+    validate_profile_name(&name).map_err(|e| e.to_string())?;
     let mgr = ProfileManager::new(platform::profiles_dir());
     mgr.delete(&name).map_err(|e| e.to_string())
 }

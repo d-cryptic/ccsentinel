@@ -4,6 +4,7 @@ use cst_core::platform;
 use cst_core::profile::ProfileManager;
 use cst_core::session::SessionManager;
 use cst_core::stats::SessionStats;
+use cst_core::{validate_profile_name, validate_session_name};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -25,6 +26,12 @@ pub fn get_stats(
     profile: Option<String>,
     session: Option<String>,
 ) -> Result<Vec<StatsDto>, String> {
+    if let Some(ref p) = profile {
+        validate_profile_name(p).map_err(|e| e.to_string())?;
+    }
+    if let Some(ref s) = session {
+        validate_session_name(s).map_err(|e| e.to_string())?;
+    }
     let mgr = ProfileManager::new(platform::profiles_dir());
     let profiles = mgr.list().map_err(|e| e.to_string())?;
     let mut result = Vec::new();

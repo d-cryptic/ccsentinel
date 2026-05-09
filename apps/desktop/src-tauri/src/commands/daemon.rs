@@ -55,7 +55,9 @@ pub async fn daemon_start() -> Result<(), String> {
     }
     // Spawn daemon in background task
     tokio::spawn(async {
-        let _ = daemon::run_daemon().await;
+        if let Err(e) = daemon::run_daemon().await {
+            tracing::error!("daemon exited with error: {e}");
+        }
     });
     Ok(())
 }
