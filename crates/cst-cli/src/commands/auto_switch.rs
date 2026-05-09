@@ -119,8 +119,19 @@ pub fn pause(minutes: Option<u64>) -> Result<()> {
         }
         None => {
             std::fs::write(&pause_file, "indefinite")?;
-            println!("Auto-switch paused indefinitely. Run `cst daemon start` to resume.");
+            println!("Auto-switch paused indefinitely. Run `cst unpause` to resume.");
         }
+    }
+    Ok(())
+}
+
+pub fn unpause() -> Result<()> {
+    let pause_file = platform::data_dir().join("auto-switch-paused");
+    if pause_file.exists() {
+        std::fs::remove_file(&pause_file)?;
+        println!("Auto-switch resumed.");
+    } else {
+        println!("Auto-switch is not paused.");
     }
     Ok(())
 }

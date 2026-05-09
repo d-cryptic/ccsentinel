@@ -126,6 +126,9 @@ enum Commands {
         minutes: Option<u64>,
     },
 
+    /// Resume auto-switching after a `cst pause`.
+    Unpause,
+
     /// Run a command with a specific profile (no persistent switch).
     Run {
         profile_session: String,
@@ -354,6 +357,7 @@ async fn main() -> Result<()> {
         Some(Commands::Daemon { action }) => commands::daemon::dispatch(action).await,
         Some(Commands::AutoSwitch { action }) => commands::auto_switch::dispatch(action).await,
         Some(Commands::Pause { minutes }) => commands::auto_switch::pause(minutes),
+        Some(Commands::Unpause) => commands::auto_switch::unpause(),
         Some(Commands::Run {
             profile_session,
             cmd,
