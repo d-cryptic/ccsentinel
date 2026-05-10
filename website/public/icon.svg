@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" fill="#080808"/>
+  <!-- Shield shape -->
+  <path
+    d="M16 3 L28 7 L28 17 C28 23 22 28 16 30 C10 28 4 23 4 17 L4 7 Z"
+    fill="none"
+    stroke="#00FFFF"
+    stroke-width="1.5"
+    filter="url(#glow)"
+  />
+  <!-- Inner shield accent line -->
+  <path
+    d="M16 5.5 L26 9 L26 17 C26 22 21 26.5 16 28.2 C11 26.5 6 22 6 17 L6 9 Z"
+    fill="none"
+    stroke="#00FFFF"
+    stroke-width="0.4"
+    opacity="0.4"
+  />
+  <!-- CST text -->
+  <text
+    x="16"
+    y="20"
+    text-anchor="middle"
+    font-family="monospace"
+    font-size="8"
+    font-weight="bold"
+    fill="#00FFFF"
+    filter="url(#glow)"
+    letter-spacing="0.5"
+  >CST</text>
+  <!-- Glow filter -->
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+</svg>

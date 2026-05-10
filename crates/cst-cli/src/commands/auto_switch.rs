@@ -20,14 +20,31 @@ pub fn configure(profile: &str) -> Result<()> {
     }
     let cfg = AutoSwitchConfig::load(&profile_dir)?;
     println!("Configuring auto-switch for profile: {profile}");
-    println!("  fallback_chain: {:?}", cfg.fallback_chain);
-    println!("  estimate_minutes: {}", cfg.estimate_minutes);
+    println!("  schedule.active_hours: {}", cfg
+        .schedule
+        .as_ref()
+        .map(|s| s.active_hours.as_str())
+        .unwrap_or("(unset)"));
+    println!("  schedule.timezone: {}", cfg
+        .schedule
+        .as_ref()
+        .map(|s| s.timezone.as_str())
+        .unwrap_or("(unset)"));
+    println!("  schedule.fallback: {}", cfg
+        .schedule
+        .as_ref()
+        .map(|s| s.fallback.as_str())
+        .unwrap_or("(unset)"));
     println!("  auto_switch_back: {}", cfg.auto_switch_back);
     println!();
+    println!(
+        "Note: profile switches are time-based only. Rate-limit signals do \
+         not trigger switches."
+    );
     if !profile_dir.join("auto-switch.toml").exists() {
         cfg.save(&profile_dir)?;
         println!(
-            "Created {}/auto-switch.toml — edit it to configure your fallback chain.",
+            "Created {}/auto-switch.toml — edit it to configure your active_hours schedule.",
             profile_dir.display()
         );
     } else {
@@ -70,25 +87,28 @@ pub fn test_chain(profile: &str) -> Result<()> {
         anyhow::bail!("profile '{profile}' not found");
     }
     let cfg = AutoSwitchConfig::load(&profile_dir)?;
-    println!("Dry-run fallback chain for: {profile}");
-    println!("  estimate_minutes: {}", cfg.estimate_minutes);
+    println!("Dry-run auto-switch settings for: {profile}");
     println!("  auto_switch_back: {}", cfg.auto_switch_back);
+    println!(
+        "  note: fallback_chain is deprecated — rate-limit-triggered switches \
+         have been removed. Use [schedule] for time-based switching."
+    );
     if cfg.fallback_chain.is_empty() {
-        println!("  fallback_chain: [empty — configure with: cst auto-switch configure {profile}]");
-        return Ok(());
-    }
-    println!("  fallback_chain:");
-    let current = GlobalConfig::load()
-        .map(|c| c.current_profile)
-        .unwrap_or_default();
-    for (i, p) in cfg.fallback_chain.iter().enumerate() {
-        let marker = if p == &current { " ← current" } else { "" };
-        let exists_mark = if platform::profile_dir(p).exists() {
-            "✓"
-        } else {
-            "✗ NOT FOUND"
-        };
-        println!("    {}. {} {} {}", i + 1, p, exists_mark, marker);
+        println!("  fallback_chain: [empty]");
+    } else {
+        println!("  fallback_chain (deprecated, ignored by daemon):");
+        let current = GlobalConfig::load()
+            .map(|c| c.current_profile)
+            .unwrap_or_default();
+        for (i, p) in cfg.fallback_chain.iter().enumerate() {
+            let marker = if p == &current { " ← current" } else { "" };
+            let exists_mark = if platform::profile_dir(p).exists() {
+                "✓"
+            } else {
+                "✗ NOT FOUND"
+            };
+            println!("    {}. {} {} {}", i + 1, p, exists_mark, marker);
+        }
     }
     if let Some(sched) = &cfg.schedule {
         println!(

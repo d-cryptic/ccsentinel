@@ -2,7 +2,9 @@
 
 ## What This Is
 
-**Claude Sentinel** (`cst`) — Intelligent Claude Code account, profile, and session manager.
+**Claude Sentinel** (`cst`) — Manage multiple Claude Code accounts, profiles, and sessions from one place.
+
+> Disclaimer: Claude Sentinel is an independent, open-source tool. It is not affiliated with, endorsed by, or associated with Anthropic PBC. "Claude" and "Claude Code" are trademarks of Anthropic PBC.
 
 - **CLI binary**: `cst` (Rust, `crates/cst-cli/`)
 - **Shared library**: `cst-core` (Rust, `crates/cst-core/`)
@@ -57,7 +59,7 @@ make changelog      # generate CHANGELOG.md via git-cliff
 - **Profile**: An account identity (auth type + credentials + settings override)
 - **Session**: An isolated workspace within a profile (own `CLAUDE_CONFIG_DIR`, project history)
 - **Auth types**: `oauth` | `api` | `bedrock` | `vertex`
-- **Auto-switch**: Background daemon that monitors rate limits and switches profiles automatically
+- **Auto-switch**: Background daemon that activates profiles on a time schedule (e.g., `active_hours`)
 - **Data dir**: `~/.claude-sentinel/` (platform-resolved)
 
 ## Architecture Decisions

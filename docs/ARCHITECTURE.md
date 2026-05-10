@@ -1,5 +1,7 @@
 # Architecture
 
+> **Disclaimer:** Claude Sentinel is an independent, open-source tool. It is not affiliated with, endorsed by, or associated with Anthropic PBC. "Claude" and "Claude Code" are trademarks of Anthropic PBC. This tool interacts with Claude Code through officially documented configuration mechanisms (`CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY`) only.
+
 ## Overview
 
 Claude Sentinel is a Cargo workspace with two crates and one Tauri app:
@@ -31,7 +33,7 @@ cst use work:backend
 ~/.claude-sentinel/
   config.toml              Current profile:session state
   switch-log.jsonl         Append-only event log (all profile switches)
-  scheduler.json           Rate-limit timer state (quota refill scheduler)
+  scheduler.json           Time-based scheduler state (next activation per profile)
   broadcast-switch.json    TTL-based broadcast for cst switch-all
   profiles/
     {name}/
@@ -44,7 +46,7 @@ cst use work:backend
           settings-override.json
           stats.json
       settings-override.json
-      auto-switch.toml     fallback_chain, schedule, [round_robin]
+      auto-switch.toml     [schedule] active_hours, timezone, fallback
 
 # Per-project (user-created, not in ~/.claude-sentinel)
 ~/your-project/.cstrc      Auto-detect profile for this directory tree
@@ -61,26 +63,23 @@ Each auth type is handled by a dedicated module in `cst-core::auth`:
 | Bedrock | `bedrock.rs` | `AWS_*` env vars injected from `aws.toml` |
 | Vertex AI | `vertex.rs` | `CLOUD_ML_REGION`, `ANTHROPIC_VERTEX_PROJECT_ID` etc. |
 
-## Auto-Switch Daemon
+## Scheduler Daemon
+
+The daemon is a time-based scheduler. It does not monitor API responses, error logs, or rate limit signals — it only evaluates each profile's configured `active_hours` window against the current time.
 
 ```
 cst daemon start → tokio background process
   │
-  ├── FileWatcher: notify crate watches history.jsonl
-  │     └── on write → detector.rs scans for rate limit patterns
+  ├── Scheduler: chrono-based timer evaluating each profile's [schedule]
+  │     └── on entering active_hours window → write pending-switch file
   │
   ├── IPC server: named pipe / Unix socket
-  │     └── cst exec wrapper writes rate limit signals here
+  │     └── handles cst pause / cst unpause / cst daemon status
   │
-  ├── Scheduler: chrono-based timer
-  │     └── fires auto-switch-back at rate_limit_time + estimate_minutes
-  │
-  └── On rate limit detected:
-        1. key rotation: try next API key in pool
-        2. if all keys exhausted: switch to next profile in fallback_chain
-        3. write pending-switch file → shell precmd picks it up
-        4. macOS notification
-        5. schedule switch-back timer
+  └── On scheduled activation:
+        1. write pending-switch file → shell precmd picks it up
+        2. native OS notification (optional)
+        3. append entry to switch-log.jsonl with reason="schedule"
 ```
 
 ## Settings Merge
@@ -126,7 +125,7 @@ cst (no args) → tui::run()
 |-----|--------|-------------|
 | PROFILES | 40% list + 60% detail panel | `ProfileManager::list()` |
 | SESSIONS | Full-width list with active marker | `SessionManager::list()` for selected profile |
-| AUTO-SWITCH | Scheduler entries with countdown | `SchedulerState::load()` |
+| AUTO-SWITCH | Scheduled activation entries with countdown | `SchedulerState::load()` |
 | HISTORY | Last 30 switch events | `SwitchLog::last_n(30)` |
 
 The Profiles tab detail panel shows: name, auth type, active/inactive status, and session list.
@@ -148,17 +147,17 @@ cst top → top::run()
   ├── TopState::load()
   │     ├── GlobalConfig → active profile:session
   │     ├── daemon_core::is_running() → daemon status
-  │     ├── SchedulerState::load() → quota countdown timers
+  │     ├── SchedulerState::load() → next scheduled activations
   │     ├── SwitchLog::last_n(5) → recent switch events
   │     └── Per-profile loop:
   │           ProfileManager::list() → profiles
   │           SessionManager::list() → sessions per profile
-  │           SessionStats::load() → tokens_in, tokens_out, rate_limit_hits, cost
+  │           SessionStats::load() → tokens_in, tokens_out, cost
   │
   ├── Layout (4 vertical sections):
   │     ├── Header (3 lines): braille spinner + "CST TOP" + active profile + daemon indicator
-  │     ├── Body (flex): table with PROFILE, SESSION, AUTH, IN, OUT, RATE LIMITS, COST $, LAST USED
-  │     ├── Bottom (5 lines): 50/50 horizontal split — QUOTA TIMERS | RECENT SWITCHES
+  │     ├── Body (flex): table with PROFILE, SESSION, AUTH, IN, OUT, COST $, LAST USED
+  │     ├── Bottom (5 lines): 50/50 horizontal split — SCHEDULE | RECENT SWITCHES
   │     └── Footer (1 line): "q quit  r refresh  (refreshes every 1s)"
   │
   └── Refresh cycle: TopState::refresh() called every 1 second via Instant::elapsed check
@@ -177,12 +176,9 @@ Both integrations load `GlobalConfig` and `SchedulerState` to output compact pro
 `cst starship` outputs a single line for Starship's `custom.cst` module:
 
 ```
-🛡 work:backend           (normal — no rate limits)
-🛡 work:backend ⚠ 2h3m   (rate-limit timer active)
-(empty output)             (no profile active — module hidden)
+work:backend            (active profile)
+(empty output)          (no profile active — module hidden)
 ```
-
-The `build_quota_indicator()` helper checks `SchedulerState` for entries where `switched_back == false` and returns the first entry's `time_until_refill()`.
 
 `cst starship --config` prints the TOML snippet to add to `starship.toml`.
 
@@ -191,7 +187,7 @@ The `build_quota_indicator()` helper checks `SchedulerState` for entries where `
 `cst tmux` outputs a tmux-markup string:
 
 ```
-#[fg=colour255,bold]work:backend#[default]⚠ 2h3m
+#[fg=colour255,bold]work:backend#[default]
 #[fg=colour240]no profile#[default]
 ```
 
@@ -215,7 +211,7 @@ apps/desktop/
     components/
       ProfileManager.tsx  Split-pane: 260px profile list + flex detail panel
       SessionGrid.tsx     Card grid, click-to-switch
-      AutoSwitchConfig.tsx  Daemon control, rate-limit timers, switch log
+      AutoSwitchConfig.tsx  Daemon control, schedule editor, switch log
       StatsPanel.tsx      Token usage table, cost estimates
     store/
       profiles.ts         Zustand store — profiles, active, CRUD actions
@@ -318,7 +314,7 @@ Steps 1 and 2 come from the daemon. Step 3 is purely directory-driven with no da
 | `cst-core::auth` | OAuth, API key (+ 1Password/Doppler/EnvVar), Bedrock, Vertex |
 | `cst-core::auth::secrets` | `SecretSource` — pluggable provider for API keys |
 | `cst-core::auto_detect` | `.cstrc` walk-up, git URL pattern matching |
-| `cst-core::auto_switch` | Daemon, detector, scheduler, switch log |
+| `cst-core::auto_switch` | Time-based scheduler daemon and switch log |
 | `cst-core::broadcast` | `switch-all` TTL file + shell dedup |
 | `cst-core::config` | `GlobalConfig` (current profile:session) |
 | `cst-core::env_overlay` | `env.toml` per-session env injection |
@@ -330,7 +326,7 @@ Steps 1 and 2 come from the daemon. Step 3 is purely directory-driven with no da
 | `cst-core::profile` | Profile CRUD + templates |
 | `cst-core::session` | Session CRUD + symlink setup |
 | `cst-core::shell` | `shell-init` code + `_env` exports |
-| `cst-core::stats` | `SessionStats` (tokens, cost, rate limits) |
+| `cst-core::stats` | `SessionStats` (tokens, cost) |
 | `cst-core::team_sync` | Git-based profile config sharing (push/pull) |
 | `cst-core::templates` | Built-in profile templates |
 

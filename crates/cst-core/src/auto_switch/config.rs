@@ -7,7 +7,14 @@ use std::path::Path;
 /// Auto-switch settings stored at `profiles/{p}/auto-switch.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoSwitchConfig {
-    /// Profiles to try on rate limit (in order).
+    // NOTE (compliance): `fallback_chain` was previously consulted on HTTP 429
+    // / rate-limit signals to switch to the next profile in the list. That
+    // behaviour was removed because Anthropic's AUP prohibits bypassing rate
+    // limit guardrails. The field is retained (read but never used by the
+    // daemon) so existing `auto-switch.toml` files continue to deserialize and
+    // so time-based scheduling can reuse it as a generic "fallback ordering"
+    // input in the future.
+    /// Deprecated: rate-limit-driven fallback. No longer triggers switches.
     #[serde(default)]
     pub fallback_chain: Vec<String>,
 
@@ -32,30 +39,26 @@ pub struct AutoSwitchConfig {
     pub round_robin: Option<RoundRobin>,
 }
 
-/// Smart round-robin: distribute usage across a pool of profiles to maximise
-/// total uptime before any single profile hits its quota.
+/// Smart round-robin pool definition.
 ///
-/// The daemon picks the profile in `pool` with the fewest tokens used today.
-///
-/// ```toml
-/// [round_robin]
-/// enabled = true
-/// pool = ["work", "personal", "api-backup"]
-/// ```
+/// NOTE (compliance): rate-limit-triggered rotation has been removed because
+/// Anthropic's AUP prohibits bypassing rate limit guardrails. The struct is
+/// retained so existing `auto-switch.toml` files continue to deserialize, but
+/// the daemon no longer consults it. Future time-based rotation may reuse
+/// `pool` as an ordered set of profiles.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoundRobin {
-    /// Whether round-robin mode is active.
+    /// Whether round-robin mode is active. Currently a no-op.
     #[serde(default = "default_true")]
     pub enabled: bool,
 
     /// Ordered list of profiles to rotate across.
     #[serde(default)]
     pub pool: Vec<String>,
-
-    /// Switch to the next profile after this many tokens (rough estimate).
-    /// Defaults to 0 = switch only on rate limit.
-    #[serde(default)]
-    pub rotate_after_tokens: u64,
+    // NOTE: `rotate_after_tokens` was removed because token-count-driven
+    // rotation was a rate-limit-bypass mechanism. Stale entries in
+    // `auto-switch.toml` are silently ignored thanks to serde's default
+    // unknown-field handling.
 }
 
 fn default_estimate_minutes() -> u64 {
@@ -156,14 +159,12 @@ estimate_minutes = 300
 [round_robin]
 enabled = true
 pool = ["work", "personal", "api-backup"]
-rotate_after_tokens = 50000
 "#;
         std::fs::write(dir.path().join("auto-switch.toml"), toml).unwrap();
         let cfg = AutoSwitchConfig::load(dir.path()).unwrap();
         let rr = cfg.round_robin.unwrap();
         assert!(rr.enabled);
         assert_eq!(rr.pool, vec!["work", "personal", "api-backup"]);
-        assert_eq!(rr.rotate_after_tokens, 50_000);
     }
 
     #[test]

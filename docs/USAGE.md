@@ -1,5 +1,7 @@
 # CLI Usage Reference
 
+> **Disclaimer:** Claude Sentinel is an independent, open-source tool. It is not affiliated with, endorsed by, or associated with Anthropic PBC. "Claude" and "Claude Code" are trademarks of Anthropic PBC. This tool interacts with Claude Code through officially documented configuration mechanisms (`CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY`) only.
+
 Full CLI reference for `cst` -- the Claude Sentinel command-line tool.
 
 ## Quick Start
@@ -36,7 +38,7 @@ The TUI has 4 tabs:
 |-----|----------|
 | PROFILES | Profile list (40%) with detail panel (60%) showing name, auth type, status, sessions |
 | SESSIONS | Session list for the selected profile with active marker |
-| AUTO-SWITCH | Active rate-limit timers, scheduler entries, countdown to refill |
+| AUTO-SWITCH | Scheduled activation entries with countdown to next switch |
 | HISTORY | Last 30 switch events with timestamps and reasons |
 
 **Keybindings**:
@@ -65,13 +67,13 @@ htop-style real-time dashboard that auto-refreshes every 1 second. Layout:
 +----------------------------------------------------------------------+
 | CST TOP | ACTIVE: work:backend          DAEMON ON                    |
 +----------------------------------------------------------------------+
-| PROFILE   SESSION   AUTH   IN     OUT    RATE LIMITS  COST $  LAST   |
-| work      backend   oauth  15.2k  4.5k   0           0.0124  03-22  |
-| personal  default   oauth  8.1k   2.3k   1           0.0000  03-21  |
-| api-work  deploy    api    120.5k 45.2k  3           1.2340  03-22  |
+| PROFILE   SESSION   AUTH   IN     OUT    COST $  LAST USED          |
+| work      backend   oauth  15.2k  4.5k   0.0124  03-22 19:00        |
+| personal  default   oauth  8.1k   2.3k   0.0000  03-21 18:45        |
+| api-work  deploy    api    120.5k 45.2k  1.2340  03-22 17:10        |
 +----------------------------------------------------------------------+
-| QUOTA TIMERS            | RECENT SWITCHES                           |
-| work -> refills in 2h3m | personal -> work | quota_refill            |
+| SCHEDULE                  | RECENT SWITCHES                         |
+| personal -> active in 3h2m | personal -> work | schedule             |
 +----------------------------------------------------------------------+
 | q quit  r refresh  (refreshes every 1s)                              |
 +----------------------------------------------------------------------+
@@ -81,7 +83,6 @@ Columns in the profile table:
 - **PROFILE** / **SESSION** -- name (active row shown with bold marker)
 - **AUTH** -- oauth, api, bedrock, vertex
 - **IN** / **OUT** -- token counts (formatted as k/M)
-- **RATE LIMITS** -- total rate limit hits for this session
 - **COST $** -- estimated API cost in USD
 - **LAST USED** -- timestamp (MM-DD HH:MM)
 
@@ -255,7 +256,7 @@ cst session switch backend --to api-backup
 cst use api-backup:backend
 ```
 
-Use case: you're on `work:backend` and hit a rate limit. Switch just the `backend` session to `api-backup:backend` to get different credentials, while other sessions stay on `work`.
+Use case: you want to run the `backend` session under different credentials (e.g., a dedicated API-key profile) while keeping other sessions on `work`.
 
 ## Team Profile Sharing
 
@@ -284,7 +285,7 @@ cst team status
 | `profile.toml` | Profile metadata (auth type, description) |
 | `settings-override.json` | Claude settings overrides |
 | `mcp-override.json` | MCP server add/disable list |
-| `auto-switch.toml` | Fallback chain, schedule, round-robin config |
+| `auto-switch.toml` | Time-based schedule (`active_hours`, `timezone`, `fallback`) |
 | `env.toml` | Per-session extra environment variables |
 
 ### What is never synced
@@ -361,7 +362,7 @@ cst auto-detect-status ~/work/api
 
 ### `cst history`
 
-Show switch history with reasons (manual, rate-limit, quota-refill, schedule, auto-detect).
+Show switch history with reasons (manual, schedule, auto-detect).
 
 ### `cst why`
 
@@ -386,7 +387,7 @@ List all profiles and their sessions.
 
 ### `cst remaining`
 
-Show quota usage for the active profile — token counts, estimated cost, rate-limit timers with countdown, and a cross-profile summary.
+Show usage for the active profile — token counts, estimated cost, and a cross-profile summary.
 
 Token counts are read live from Claude Code's `history.jsonl` when available (labelled `(live)`), falling back to the cached `stats.json`.
 
@@ -397,25 +398,21 @@ Profile  : work:backend
   Tokens in   : 15.2k
   Tokens out  : 4.5k
   Total       : 19.7k
-  Rate limits : 0
-  Last used   : 2026-03-22 19:00 UTC
+  Last used   : 2026-05-10 19:00 UTC
 
 ── All Sessions (work) ─────────────────────────────────────
   Tokens in   : 45.3k
   Tokens out  : 12.1k
 
-── Quota Status ────────────────────────────────────────────
-  No active rate limits detected.
-
 ── All Profiles ────────────────────────────────────────────
   work [ACTIVE]        in:   45.3k  out:   12.1k
   personal             in:    8.1k  out:    2.3k
-  api-backup           in:  120.5k  out:   45.2k  ⚠ 3 rate limits
+  api-backup           in:  120.5k  out:   45.2k
 ```
 
 ### `cst stats [<profile:session>]`
 
-Show detailed usage statistics. Includes: session count, rate limit hits, tokens in/out, estimated API cost.
+Show detailed usage statistics. Includes: session count, tokens in/out, estimated API cost.
 
 ```bash
 cst stats
@@ -443,7 +440,9 @@ cst validate <name>  # per-profile credential + session detail
 
 Rebuild symlinks from `~/.claude/` to all sessions.
 
-## Auto-Switch Daemon
+## Scheduler Daemon
+
+The daemon evaluates each profile's `[schedule]` (`active_hours`, `timezone`, `fallback`) and writes a pending-switch when the active window changes. It does not react to API errors or rate limit signals.
 
 ### Daemon lifecycle
 
@@ -455,19 +454,20 @@ cst daemon status
 cst daemon logs              # tail daemon log output
 ```
 
-### Auto-switch configuration
+### Schedule configuration
 
 ```bash
-cst auto-switch configure work        # interactive wizard
-cst auto-switch log                   # history of all auto-switches
+cst auto-switch configure work        # interactive wizard (active_hours, timezone, fallback)
+cst auto-switch log                   # history of all scheduled switches
 cst auto-switch test work             # dry-run: show what would happen
 ```
 
-### Pause auto-switching
+### Pause scheduled switching
 
 ```bash
 cst pause                    # pause indefinitely
 cst pause --minutes 60       # pause for 1 hour
+cst unpause                  # resume
 ```
 
 See [AUTO-SWITCH.md](AUTO-SWITCH.md) for the full configuration reference.
@@ -500,7 +500,7 @@ cst starship                # output for Starship custom module
 cst starship --config       # print starship.toml config snippet
 ```
 
-Shows `profile:session` and a warning indicator when rate-limited (e.g., `work:backend !! 2h3m`).
+Shows `profile:session` (e.g., `work:backend`).
 
 Add to `~/.config/starship.toml`:
 
@@ -520,7 +520,7 @@ cst tmux                    # output for tmux status-right
 cst tmux --config           # print tmux.conf config snippet
 ```
 
-Shows the active profile:session with tmux color markup and quota warnings.
+Shows the active profile:session with tmux color markup.
 
 Add to `~/.config/tmux/tmux.conf`:
 

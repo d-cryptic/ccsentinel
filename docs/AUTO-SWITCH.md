@@ -1,16 +1,20 @@
-# Auto-Switch
+# Profile Scheduling & Automatic Context Switching
 
-The auto-switch daemon monitors your Claude usage and automatically switches profiles on rate limits.
+> **Disclaimer:** Claude Sentinel is an independent, open-source tool. It is not affiliated with, endorsed by, or associated with Anthropic PBC. "Claude" and "Claude Code" are trademarks of Anthropic PBC.
+
+The Claude Sentinel daemon enables **time-based automatic profile switching** — for example, activating your work account during business hours and your personal account in the evenings.
+
+This feature is designed for **context organization**, not quota management. Each profile you add must be a Claude account you legitimately own and control.
 
 ## How It Works
 
 ```
 1. cst daemon start
-2. Daemon watches ~/.claude-sentinel/.../history.jsonl for rate limit patterns
-3. Rate limit detected → try next API key in pool
-4. All keys exhausted → switch to next profile in fallback_chain
-5. Sends shell notification (precmd hook) + macOS notification
-6. Schedules auto-switch-back at: rate_limit_time + estimate_minutes
+2. Daemon evaluates each profile's schedule (active_hours / timezone)
+3. When the current time enters a profile's active window, the daemon
+   writes a pending-switch file
+4. Shell precmd hook picks up the pending switch on the next prompt
+5. Optional macOS / Linux / Windows notification on switch
 ```
 
 ## Configuration
@@ -18,48 +22,16 @@ The auto-switch daemon monitors your Claude usage and automatically switches pro
 ```toml
 # ~/.claude-sentinel/profiles/work/auto-switch.toml
 
-# Profiles to try in order when rate limit is hit
-fallback_chain = ["api-backup", "personal"]
-
-# Estimated minutes until quota refills (Claude Pro: 5-hour window = 300 min)
-estimate_minutes = 300
-
-# Automatically switch back when quota refills
-auto_switch_back = true
-
-# Notify on auto-switch (macOS notification)
+# Notify on auto-switch (native OS notification)
 notify = true
 
 [schedule]
-# Only activate this profile during these hours (optional)
+# Activate this profile during these hours
 active_hours = "09:00-18:00"
 timezone = "America/New_York"
 # Switch to this profile outside active_hours
 fallback = "personal"
-
-[round_robin]
-# Distribute usage across a pool of profiles to maximise total uptime.
-# The daemon picks the profile with the fewest tokens used before switching.
-enabled = true
-pool = ["work", "personal", "api-backup"]
-# Rotate after this many tokens (0 = only on rate limit)
-rotate_after_tokens = 0
 ```
-
-### Round-Robin Mode
-
-Round-robin distributes usage across a pool of profiles so no single account hits its quota while others remain idle. Enable it with the `[round_robin]` section above.
-
-**How it works:**
-
-1. Daemon detects a rate limit on the active profile
-2. Reads `stats.json` (or live `history.jsonl`) for each profile in `pool`
-3. Picks the profile with the lowest token usage today
-4. Switches via the normal fallback mechanism
-
-**`rotate_after_tokens`**: when set to a non-zero value the daemon proactively rotates before hitting quota. Example: `rotate_after_tokens = 80000` rotates when the current profile has used ~80k tokens in the session, spreading load evenly.
-
-Round-robin and `fallback_chain` are independent — if round-robin is disabled, the explicit `fallback_chain` is used instead.
 
 ## Daemon Commands
 
@@ -71,18 +43,11 @@ cst daemon status             # show running status
 cst daemon logs               # tail daemon logs
 
 cst auto-switch configure work  # interactive configuration wizard
-cst auto-switch log            # history of all auto-switches
-cst auto-switch test work      # dry-run: show what would happen
-cst pause [--minutes 30]       # pause auto-switch temporarily
+cst auto-switch log             # history of all scheduled switches
+cst auto-switch test work       # dry-run: show what would happen
+cst pause [--minutes 30]        # pause scheduled switching temporarily
+cst unpause                     # resume scheduled switching
 ```
-
-## Rate Limit Detection
-
-Sentinel uses multiple layers:
-
-1. **File watcher**: Monitors `history.jsonl` for rate limit JSON entries
-2. **Wrapper mode**: `cst exec -- claude` intercepts stderr/stdout
-3. **IPC**: Claude Code `PostToolUse` hook can signal the daemon directly
 
 ## Shell Integration
 
@@ -96,23 +61,20 @@ This injects a `precmd` hook that checks for pending switches from the daemon ev
 
 ## Monitoring with `cst top`
 
-The `cst top` live dashboard shows auto-switch state in real time:
+The `cst top` live dashboard shows scheduler state in real time:
 
-- **QUOTA TIMERS** panel: active rate-limit countdown timers with profile name and time until refill
+- **SCHEDULE** panel: upcoming scheduled activations with profile name and time-until-activation
 - **RECENT SWITCHES** panel: last 5 switch events with `from → to | reason`
 - **Header**: daemon status indicator (ON/OFF)
-- **Per-profile table**: rate limit hit count per session
+- **Per-profile table**: token usage and cost per session
 
-The dashboard refreshes every 1 second. Run `cst top` to watch auto-switch activity as it happens.
+The dashboard refreshes every 1 second.
 
 The interactive TUI (`cst` with no args) also has an AUTO-SWITCH tab showing the same scheduler entries and a HISTORY tab with the last 30 switch events.
 
-## Quota Reset Estimates
+## Usage Guidelines
 
-| Plan | Estimate |
-|------|----------|
-| Claude Pro | 300 min (5-hour rolling window) |
-| Claude Max | 300 min (higher quota, same window) |
-| API (Tier 1) | 60 min |
-| API (Tier 2+) | Configure manually |
-| AWS Bedrock | Configure manually |
+- Each profile must correspond to a Claude account you legitimately own
+- The daemon activates profiles on a **time schedule**, not in response to API errors
+- Do not configure the daemon to switch accounts in response to rate limit signals — this violates Anthropic's Terms of Service
+- Claude Sentinel does not aggregate quota across accounts

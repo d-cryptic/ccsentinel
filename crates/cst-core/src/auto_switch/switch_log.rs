@@ -14,9 +14,11 @@ use crate::platform;
 pub enum SwitchReason {
     /// User explicitly ran `cst use`.
     Manual,
-    /// Daemon detected a rate limit.
+    /// Deprecated: rate-limit-triggered switches are no longer produced.
+    /// Retained so historical log entries continue to deserialize.
     RateLimit,
-    /// Quota estimated to have refilled → switched back.
+    /// Deprecated: post-rate-limit quota-refill switch-backs are no longer
+    /// produced. Retained so historical log entries continue to deserialize.
     QuotaRefill,
     /// Time-based schedule triggered the switch.
     Schedule,

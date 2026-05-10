@@ -1,18 +1,16 @@
-//! Background daemon — watches history.jsonl files, detects rate limits,
-//! triggers profile switches, and schedules switch-backs.
+//! Background daemon — performs time-based profile switches.
+//!
+//! NOTE (compliance): rate-limit-triggered profile switching has been removed.
+//! Anthropic's Acceptable Use Policy prohibits bypassing rate limit guardrails,
+//! so the daemon no longer monitors `history.jsonl` for HTTP 429 / rate-limit
+//! patterns. Switches are driven exclusively by the user-configured
+//! `active_hours` schedule and explicit `cst use` invocations.
 
 use anyhow::Result;
-use notify::{Config as NotifyConfig, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::PathBuf;
-use std::sync::mpsc;
 use std::time::Duration;
 use tokio::time;
 
-use crate::auto_switch::config::AutoSwitchConfig;
-use crate::auto_switch::detector;
-use crate::auto_switch::scheduler::SchedulerState;
-use crate::auto_switch::switch_log::{SwitchEvent, SwitchLog, SwitchReason};
-use crate::config::GlobalConfig;
 use crate::platform;
 use crate::shell::shell_escape_single_quote;
 
@@ -47,13 +45,14 @@ pub fn write_pending_switch(profile: &str, session: &str) -> Result<()> {
 
 /// Core daemon loop. Runs until cancelled.
 ///
-/// Strategy:
-/// 1. Watch all `history.jsonl` files for writes.
-/// 2. On change: tail new lines, scan for rate-limit patterns.
-/// 3. On detection: look up current profile's fallback chain, switch to next.
-/// 4. Every 60 s: check scheduler for pending switch-backs.
+/// Strategy (time-based only):
+/// 1. Honour the pause file written by `cst pause` / `cst unpause`.
+/// 2. Sleep in short ticks so the process remains responsive to signals.
+///
+/// Future time-based scheduling (active_hours / timezone) plugs in here.
 pub async fn run_daemon() -> Result<()> {
-    tracing::info!("claude-sentinel daemon starting");
+    // Switches are time-based only — rate limit signals do not trigger profile changes.
+    tracing::info!("claude-sentinel daemon starting (time-based scheduling only)");
 
     // Write PID file
     let pid = std::process::id();
@@ -63,37 +62,12 @@ pub async fn run_daemon() -> Result<()> {
     }
     std::fs::write(&pid_path, pid.to_string())?;
 
-    let (tx, rx) = mpsc::channel();
-    let mut watcher = RecommendedWatcher::new(
-        move |res| {
-            let _ = tx.send(res);
-        },
-        NotifyConfig::default().with_poll_interval(Duration::from_secs(2)),
-    )?;
-
-    // Watch the entire data dir recursively so new sessions are picked up
-    let data_dir = platform::data_dir();
-    std::fs::create_dir_all(&data_dir)?;
-    watcher.watch(&data_dir, RecursiveMode::Recursive)?;
-
-    // Also watch ~/.claude/ for global history
-    let global_claude = platform::global_claude_dir();
-    if global_claude.exists() {
-        if let Err(e) = watcher.watch(&global_claude, RecursiveMode::NonRecursive) {
-            tracing::warn!("could not watch {}: {e}", global_claude.display());
-        }
-    }
-
-    let switch_log = SwitchLog::open();
-    let mut scheduler = SchedulerState::load().unwrap_or_default();
-    let mut last_scheduler_check = std::time::Instant::now();
-
-    tracing::info!("daemon watching for rate limits");
-
     loop {
+        // Switches are time-based only — rate limit signals do not trigger profile changes.
+
         // Honour the pause file written by `cst pause`.
         let pause_path = platform::data_dir().join("auto-switch-paused");
-        let paused = if pause_path.exists() {
+        let _paused = if pause_path.exists() {
             match std::fs::read_to_string(&pause_path) {
                 Ok(content) if content.trim() == "indefinite" => true,
                 Ok(content) => {
@@ -110,237 +84,12 @@ pub async fn run_daemon() -> Result<()> {
             false
         };
 
-        if !paused {
-            // Poll file-system events (non-blocking)
-            while let Ok(Ok(event)) = rx.try_recv() {
-                for path in &event.paths {
-                    if path.extension().map(|e| e == "jsonl").unwrap_or(false) {
-                        if let Err(e) = handle_file_change(path, &mut scheduler, &switch_log) {
-                            tracing::warn!("error processing change to {}: {e}", path.display());
-                        }
-                    }
-                }
-            }
-        } else {
-            // Drain events so the channel doesn't fill up while paused.
-            while rx.try_recv().is_ok() {}
-            tracing::debug!("auto-switch paused — skipping event processing");
-        }
+        // TODO: evaluate `active_hours` schedule for the current profile and
+        // switch to its `fallback` profile when outside the active window.
+        // This is intentionally a no-op until the time-based scheduler lands.
 
-        // Periodic scheduler check (every 60 s)
-        if last_scheduler_check.elapsed() >= Duration::from_secs(60) {
-            if !paused {
-                if let Err(e) = check_scheduler_switchbacks(&mut scheduler, &switch_log) {
-                    tracing::warn!("scheduler check error: {e}");
-                }
-            }
-            last_scheduler_check = std::time::Instant::now();
-        }
-
-        time::sleep(Duration::from_millis(500)).await;
+        time::sleep(Duration::from_secs(30)).await;
     }
-}
-
-/// Read the last `max_bytes` of a file, returning a String.
-///
-/// History files can grow to hundreds of MB; we only need the most recent
-/// lines, so we seek near the end rather than loading the whole file.
-///
-/// Non-UTF-8 bytes (e.g. from user source files embedded in tool results)
-/// are replaced with the Unicode replacement character so detection is never
-/// silenced by a bad byte sequence.
-fn read_tail(path: &std::path::Path, max_bytes: u64) -> Result<String> {
-    use std::io::{Read, Seek, SeekFrom};
-    let mut f = std::fs::File::open(path)?;
-    let len = f.metadata()?.len();
-    let start = len.saturating_sub(max_bytes);
-    f.seek(SeekFrom::Start(start))?;
-    let mut buf = Vec::new();
-    f.read_to_end(&mut buf)?;
-    Ok(String::from_utf8_lossy(&buf).into_owned())
-}
-
-/// Called when a `.jsonl` file changes — scan new lines for rate-limit patterns.
-fn handle_file_change(
-    path: &std::path::Path,
-    scheduler: &mut SchedulerState,
-    switch_log: &SwitchLog,
-) -> Result<()> {
-    // Read only the last 8 KiB — avoids loading large history files into memory.
-    // At ~200 bytes per JSON line this covers ~40 recent lines, well beyond the 20 we inspect.
-    let tail = read_tail(path, 8 * 1024)?;
-    // Scan last 20 complete lines (skip the possibly-partial first line at the seek boundary)
-    let lines: Vec<&str> = tail.lines().rev().take(20).collect();
-    for line in lines {
-        if detector::is_rate_limit_line(line) {
-            let reason = detector::extract_reason(line);
-            tracing::info!("rate limit detected in {}: {reason}", path.display());
-            trigger_switch(scheduler, switch_log, &reason)?;
-            break;
-        }
-    }
-    Ok(())
-}
-
-/// Perform the actual profile switch when a rate limit is detected.
-fn trigger_switch(
-    scheduler: &mut SchedulerState,
-    switch_log: &SwitchLog,
-    reason: &str,
-) -> Result<()> {
-    let cfg = GlobalConfig::load()?;
-    let current_profile = cfg.current_profile.clone();
-    let current_session = cfg.current_session.clone();
-
-    if current_profile.is_empty() {
-        tracing::warn!("no active profile, cannot auto-switch");
-        return Ok(());
-    }
-
-    // Load this profile's auto-switch config
-    let profile_dir = platform::profile_dir(&current_profile);
-    let as_cfg = AutoSwitchConfig::load(&profile_dir)?;
-
-    // Warn if the user configured round_robin — it is not yet implemented.
-    if let Some(ref rr) = as_cfg.round_robin {
-        if rr.enabled {
-            tracing::warn!(
-                "round_robin is configured for {current_profile} but is not yet implemented — \
-                 falling back to fallback_chain"
-            );
-        }
-    }
-
-    if as_cfg.fallback_chain.is_empty() {
-        tracing::info!("no fallback chain configured for {current_profile}, pausing");
-        return Ok(());
-    }
-
-    // Pick next profile in chain (skip if it's the current one).
-    // Validate names before using them as path components or shell exports;
-    // auto-switch.toml is user-editable and could contain crafted values.
-    let target = as_cfg
-        .fallback_chain
-        .iter()
-        .find(|p| {
-            if p.as_str() == current_profile {
-                return false;
-            }
-            if let Err(e) = crate::profile::validate_profile_name(p) {
-                tracing::warn!("skipping invalid fallback chain entry {p:?}: {e}");
-                return false;
-            }
-            true
-        })
-        .cloned();
-
-    let Some(target_profile) = target else {
-        tracing::warn!("fallback chain has no valid alternative to {current_profile}");
-        return Ok(());
-    };
-
-    // Record rate limit in scheduler for future switch-back
-    scheduler.record_rate_limit(
-        &current_profile,
-        as_cfg.estimate_minutes,
-        as_cfg.auto_switch_back,
-    );
-    if let Err(e) = scheduler.save() {
-        tracing::warn!("failed to persist scheduler state after rate-limit event — auto-switch-back may not fire: {e}");
-    }
-
-    // Write pending-switch for shell precmd hook
-    write_pending_switch(&target_profile, "default")?;
-
-    // Log the event
-    let event = SwitchEvent {
-        timestamp: chrono::Utc::now(),
-        from_profile: current_profile.clone(),
-        from_session: current_session,
-        to_profile: target_profile.clone(),
-        to_session: "default".to_string(),
-        reason: SwitchReason::RateLimit,
-        detail: reason.to_string(),
-    };
-    switch_log.append(&event)?;
-
-    // Update global config
-    let mut new_cfg = cfg;
-    new_cfg.current_profile = target_profile.clone();
-    new_cfg.current_session = "default".to_string();
-    new_cfg.save()?;
-
-    tracing::info!("auto-switched from {current_profile} to {target_profile}: {reason}");
-
-    // macOS notification (best-effort).
-    // Escape " in profile names to prevent AppleScript string injection.
-    #[cfg(target_os = "macos")]
-    if as_cfg.notify {
-        let safe_target = target_profile.replace('"', "\\\"");
-        let safe_current = current_profile.replace('"', "\\\"");
-        let _ = std::process::Command::new("osascript")
-            .arg("-e")
-            .arg(format!(
-                r#"display notification "Switched to {safe_target}" with title "Claude Sentinel" subtitle "Rate limit on {safe_current}""#
-            ))
-            .spawn();
-    }
-
-    Ok(())
-}
-
-/// Check scheduler for profiles whose quota has refilled — switch back if needed.
-fn check_scheduler_switchbacks(
-    scheduler: &mut SchedulerState,
-    switch_log: &SwitchLog,
-) -> Result<()> {
-    let pending: Vec<String> = scheduler
-        .pending_switchbacks()
-        .iter()
-        .map(|e| e.profile.clone())
-        .collect();
-
-    if pending.is_empty() {
-        return Ok(());
-    }
-
-    // Load config once for the whole switchback batch, not once per profile.
-    let mut cfg = GlobalConfig::load()?;
-
-    for profile in pending {
-        // Validate before using as a shell-export value. scheduler.json is
-        // user-owned but tampered entries must not reach write_pending_switch.
-        if let Err(e) = crate::profile::validate_profile_name(&profile) {
-            tracing::warn!("skipping invalid scheduler entry {profile:?}: {e}");
-            scheduler.mark_switched_back(&profile);
-            scheduler.save().ok();
-            continue;
-        }
-
-        tracing::info!("quota refilled for {profile}, switching back");
-
-        let event = SwitchEvent {
-            timestamp: chrono::Utc::now(),
-            from_profile: cfg.current_profile.clone(),
-            from_session: cfg.current_session.clone(),
-            to_profile: profile.clone(),
-            to_session: "default".to_string(),
-            reason: SwitchReason::QuotaRefill,
-            detail: format!("estimated quota refill for {profile}"),
-        };
-        switch_log.append(&event)?;
-
-        write_pending_switch(&profile, "default")?;
-
-        cfg.current_profile = profile.clone();
-        cfg.current_session = "default".to_string();
-        cfg.save()?;
-
-        scheduler.mark_switched_back(&profile);
-        scheduler.save()?;
-    }
-
-    Ok(())
 }
 
 /// Check if the daemon is running by inspecting the PID file.

@@ -1,17 +1,19 @@
-# 🛡 Claude Sentinel
+# Claude Sentinel
 
-> Intelligent Claude Code account, profile, and session manager
+> **Disclaimer:** Claude Sentinel is an independent, open-source tool. It is not affiliated with, endorsed by, or associated with Anthropic PBC. "Claude" and "Claude Code" are trademarks of Anthropic PBC. This tool interacts with Claude Code through officially documented configuration mechanisms (`CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY`) only.
 
-**`cst`** — the CLI tool that manages multiple Claude Code accounts, automatically switches profiles on rate limits, and isolates your sessions.
+> Manage multiple Claude Code accounts, profiles, and sessions from one place.
+
+**`cst`** — the CLI tool that manages multiple Claude Code accounts, isolates sessions per project, and lets you switch context instantly between work, personal, and client setups.
 
 ## Features
 
 - **All auth types**: Claude Pro/Max (OAuth), API key, AWS Bedrock, Google Vertex AI
-- **Multi-key rotation**: Exhausts API key pool before switching profiles
-- **Auto-switch on rate limits**: Automatically falls back to configured profile when quota exhausted
-- **Auto-switch back**: Schedules return to primary profile when quota refills
-- **Time-based switching**: "Use work profile 9am-6pm, personal otherwise"
-- **Per-profile sessions**: Isolated conversation history, settings, and MCP config
+- **Multiple accounts**: Separate work, personal, and client accounts in one tool
+- **Instant switching**: `cst use work:backend` switches context in milliseconds
+- **Session isolation**: Each session gets its own conversation history, settings, and MCP config
+- **Scheduled rotation**: Time-based profile activation ("work account 9am–6pm, personal otherwise")
+- **Per-session env overlays**: Different `ANTHROPIC_BASE_URL`, model, or settings per session
 - **3-layer settings merge**: Global base + profile overrides + session overrides
 - **Shared global config**: agents, rules, skills, commands auto-symlinked to all sessions
 - **Beautiful TUI**: Interactive profile/session navigator
@@ -34,21 +36,22 @@ cst init
 ## Quick Start
 
 ```bash
-# Create profiles
-cst new personal --auth oauth    # Claude subscription
-cst new work --auth oauth        # Another subscription
-cst new api-acct --auth api      # API key
+# Create profiles for different contexts
+cst new work --auth oauth       # work Claude subscription
+cst new personal --auth oauth   # personal Claude subscription
+cst new api-project --auth api  # API key for a specific project
 
-# Switch
+# Switch context instantly
 cst use work
-cst use work:backend             # named session
+cst use work:backend            # named session within work profile
 
-# Auto-switch on rate limits
-cst auto-switch configure work   # set fallback chain
+# Schedule automatic switching (time-based, not rate-limit-based)
+cst auto-switch configure work  # set active_hours = "09:00-18:00"
 cst daemon start
 
-# Check quota
-cst remaining
+# Check status
+cst status
+cst top                         # live dashboard
 
 # Interactive TUI
 cst
@@ -60,7 +63,7 @@ cst
 - [Usage Reference](docs/USAGE.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Auth Types](docs/AUTH.md)
-- [Auto-Switch](docs/AUTO-SWITCH.md)
+- [Profile Scheduling](docs/AUTO-SWITCH.md)
 
 ## License
 
