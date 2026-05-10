@@ -1,6 +1,6 @@
 # Claude Sentinel — Raycast Script Commands
 
-Raycast script commands for [claude-sentinel](https://github.com/d-cryptic/claude-sentinel).
+Raycast script commands for [claude-sentinel](https://github.com/d-cryptic/ccsentinel).
 
 ## Install
 

@@ -1,6 +1,6 @@
 # Claude Sentinel -- Alfred Workflow
 
-Alfred script commands for [claude-sentinel](https://github.com/d-cryptic/claude-sentinel).
+Alfred script commands for [claude-sentinel](https://github.com/d-cryptic/ccsentinel).
 
 ## Install
 

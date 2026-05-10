@@ -1,7 +1,7 @@
 import { CopyCommand } from "./CopyCommand";
 import { TerminalCard } from "./TerminalCard";
 
-const REPO = "https://github.com/d-cryptic/claude-sentinel";
+const REPO = "https://github.com/d-cryptic/ccsentinel";
 
 export function Hero() {
   return (

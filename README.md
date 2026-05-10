@@ -24,7 +24,7 @@
 
 ```bash
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/d-cryptic/claude-sentinel/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/d-cryptic/ccsentinel/main/install.sh | sh
 
 # Cargo
 cargo install cst-cli

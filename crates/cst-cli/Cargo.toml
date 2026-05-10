@@ -8,8 +8,8 @@ description = "Claude Sentinel — intelligent Claude Code multi-account manager
 keywords = ["claude", "cli", "profile-manager", "anthropic", "dev-tools"]
 categories = ["command-line-utilities", "authentication"]
 readme = "../../README.md"
-documentation = "https://github.com/d-cryptic/claude-sentinel/blob/main/docs/USAGE.md"
-homepage = "https://github.com/d-cryptic/claude-sentinel"
+documentation = "https://github.com/d-cryptic/ccsentinel/blob/main/docs/USAGE.md"
+homepage = "https://github.com/d-cryptic/ccsentinel"
 repository.workspace = true
 default-run = "cst"
 

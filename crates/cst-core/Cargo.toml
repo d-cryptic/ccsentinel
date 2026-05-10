@@ -9,7 +9,7 @@ keywords = ["claude", "cli", "auth", "profile-manager", "anthropic"]
 categories = ["command-line-utilities", "authentication", "config"]
 readme = "../../README.md"
 documentation = "https://docs.rs/cst-core"
-homepage = "https://github.com/d-cryptic/claude-sentinel"
+homepage = "https://github.com/d-cryptic/ccsentinel"
 repository.workspace = true
 exclude = ["/tests", "/.github"]
 

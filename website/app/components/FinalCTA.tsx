@@ -1,4 +1,4 @@
-const REPO = "https://github.com/d-cryptic/claude-sentinel";
+const REPO = "https://github.com/d-cryptic/ccsentinel";
 
 export function FinalCTA() {
   return (

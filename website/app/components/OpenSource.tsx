@@ -1,5 +1,5 @@
-const REPO = "https://github.com/d-cryptic/claude-sentinel";
-const API = "https://api.github.com/repos/d-cryptic/claude-sentinel";
+const REPO = "https://github.com/d-cryptic/ccsentinel";
+const API = "https://api.github.com/repos/d-cryptic/ccsentinel";
 
 async function getGitHubStats() {
   try {
@@ -87,7 +87,7 @@ export async function OpenSource() {
                 </div>
                 <div>
                   <div className="font-mono text-sm text-cyan glow-cyan">
-                    d-cryptic/claude-sentinel
+                    d-cryptic/ccsentinel
                   </div>
                   <div className="font-mono text-[11px] text-dim uppercase tracking-widest mt-0.5">
                     Public &middot; MIT &middot; Rust

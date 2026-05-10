@@ -18,7 +18,7 @@
 ### Clone and build
 
 ```bash
-git clone https://github.com/d-cryptic/claude-sentinel
+git clone https://github.com/d-cryptic/ccsentinel
 cd claude-sentinel
 
 # Auto-activate with direnv, or manually:

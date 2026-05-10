@@ -5,13 +5,13 @@
 ### macOS / Linux
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/d-cryptic/claude-sentinel/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/d-cryptic/ccsentinel/main/install.sh | sh
 ```
 
 ### macOS — Homebrew
 
 ```bash
-brew tap d-cryptic/claude-sentinel
+brew tap d-cryptic/ccsentinel
 brew install claude-sentinel
 ```
 
@@ -20,10 +20,10 @@ The Homebrew formula automatically installs shell completions for bash, zsh, and
 ### Windows (PowerShell)
 
 ```powershell
-iwr https://raw.githubusercontent.com/d-cryptic/claude-sentinel/main/install.ps1 | iex
+iwr https://raw.githubusercontent.com/d-cryptic/ccsentinel/main/install.ps1 | iex
 ```
 
-Or download `cst-vX.Y.Z-x86_64-windows.zip` from [GitHub Releases](https://github.com/d-cryptic/claude-sentinel/releases), extract, and add `cst.exe` to your PATH.
+Or download `cst-vX.Y.Z-x86_64-windows.zip` from [GitHub Releases](https://github.com/d-cryptic/ccsentinel/releases), extract, and add `cst.exe` to your PATH.
 
 ### Via Cargo
 
@@ -48,8 +48,8 @@ Each archive ships a `.sha256` checksum file. Download and install manually:
 ```bash
 # Example: macOS Apple Silicon
 VERSION=v0.1.0
-curl -LO https://github.com/d-cryptic/claude-sentinel/releases/download/${VERSION}/cst-${VERSION}-aarch64-apple-darwin.tar.gz
-curl -LO https://github.com/d-cryptic/claude-sentinel/releases/download/${VERSION}/cst-${VERSION}-aarch64-apple-darwin.tar.gz.sha256
+curl -LO https://github.com/d-cryptic/ccsentinel/releases/download/${VERSION}/cst-${VERSION}-aarch64-apple-darwin.tar.gz
+curl -LO https://github.com/d-cryptic/ccsentinel/releases/download/${VERSION}/cst-${VERSION}-aarch64-apple-darwin.tar.gz.sha256
 
 # Verify checksum
 sha256sum -c cst-${VERSION}-aarch64-apple-darwin.tar.gz.sha256

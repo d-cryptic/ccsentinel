@@ -28,7 +28,7 @@ After `git push --tags` triggers the release workflow:
 ## Test locally before publishing
 
 ```bash
-brew tap d-cryptic/claude-sentinel /tmp/homebrew-tap
+brew tap d-cryptic/ccsentinel /tmp/homebrew-tap
 brew install claude-sentinel
 cst --version
 ```
