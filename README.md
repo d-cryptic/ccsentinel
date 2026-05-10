@@ -1,5 +1,7 @@
 # Claude Sentinel
 
+**Website:** https://ccsentinel.heybarun.com
+
 > **Disclaimer:** Claude Sentinel is an independent, open-source tool. It is not affiliated with, endorsed by, or associated with Anthropic PBC. "Claude" and "Claude Code" are trademarks of Anthropic PBC. This tool interacts with Claude Code through officially documented configuration mechanisms (`CLAUDE_CONFIG_DIR`, `ANTHROPIC_API_KEY`) only.
 
 > Manage multiple Claude Code accounts, profiles, and sessions from one place.
@@ -71,6 +73,10 @@ cst
 - [Auth Types](docs/AUTH.md)
 - [Profile Scheduling](docs/AUTO-SWITCH.md)
 - [Account Pipeline](docs/PIPELINE.md)
+
+## Contributing
+
+PRs and issues welcome — see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ## License
 
