@@ -252,7 +252,10 @@ mod tests {
         };
         // Should succeed without touching the OS Keychain
         let result = pool.remove_key(1);
-        assert!(result.is_ok(), "remove_key for external slot must not error: {result:?}");
+        assert!(
+            result.is_ok(),
+            "remove_key for external slot must not error: {result:?}"
+        );
         assert!(pool.keys.is_empty());
     }
 

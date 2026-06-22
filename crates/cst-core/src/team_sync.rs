@@ -85,9 +85,8 @@ impl TeamSyncConfig {
     /// Load from `~/.claude-sentinel/team-sync.toml`.
     pub fn load() -> Result<Self> {
         let path = config_path();
-        let content = std::fs::read_to_string(&path).with_context(|| {
-            format!("team sync not configured — run: cst team init <remote-url>")
-        })?;
+        let content = std::fs::read_to_string(&path)
+            .with_context(|| "team sync not configured — run: cst team init <remote-url>")?;
         Ok(toml::from_str(&content)?)
     }
 
@@ -409,10 +408,10 @@ fn copy_profile_to_repo(name: &str, profiles_dir: &Path, repo: &Path) -> Result<
 /// requiring the file to match the full Profile schema.
 fn copy_profile_toml_without_hooks(src: &Path, dst: &Path) -> Result<()> {
     use anyhow::Context as _;
-    let contents = std::fs::read_to_string(src)
-        .with_context(|| format!("reading {}", src.display()))?;
-    let mut value: toml::Value = toml::from_str(&contents)
-        .with_context(|| format!("parsing {}", src.display()))?;
+    let contents =
+        std::fs::read_to_string(src).with_context(|| format!("reading {}", src.display()))?;
+    let mut value: toml::Value =
+        toml::from_str(&contents).with_context(|| format!("parsing {}", src.display()))?;
     // Remove the [hooks] table if present
     if let toml::Value::Table(ref mut tbl) = value {
         tbl.remove("hooks");
@@ -467,11 +466,7 @@ fn copy_profile_from_repo_with_strategy(
                 // pre-existing or bypassed remote may still contain hook commands.
                 // Stripping on the pull side guarantees that no hook from a remote
                 // source can execute locally, regardless of how the remote was populated.
-                copy_profile_toml_without_hooks_with_strategy(
-                    &s,
-                    &dst.join(file),
-                    strategy,
-                )?;
+                copy_profile_toml_without_hooks_with_strategy(&s, &dst.join(file), strategy)?;
             } else {
                 copy_file_with_strategy(&s, &dst.join(file), strategy)?;
             }
@@ -520,7 +515,7 @@ fn copy_file_with_strategy(remote: &Path, local: &Path, strategy: &MergeStrategy
             if !local.exists() {
                 // No local file — just copy.
                 std::fs::copy(remote, local)?;
-            } else if remote.extension().map_or(false, |ext| ext == "json") {
+            } else if remote.extension().is_some_and(|ext| ext == "json") {
                 // Deep merge JSON: local is base, remote is overlay (remote wins on scalars).
                 let mut base = merge::load_json(local)?;
                 let overlay = merge::load_json(remote)?;
@@ -590,7 +585,7 @@ fn ensure_repo_exists(repo: &Path, cfg: &TeamSyncConfig) -> Result<()> {
 
 fn git(repo: &Path, args: &[&str]) -> Result<()> {
     let status = Command::new("git")
-        .args([&["-C", &repo.to_string_lossy().to_string()], args].concat())
+        .args([&["-C", repo.to_string_lossy().as_ref()], args].concat())
         .status()
         .context("running git")?;
     if !status.success() {
@@ -797,10 +792,8 @@ mod tests {
         )
         .unwrap();
 
-        let contents = std::fs::read_to_string(
-            dst_root.path().join("work").join("profile.toml"),
-        )
-        .unwrap();
+        let contents =
+            std::fs::read_to_string(dst_root.path().join("work").join("profile.toml")).unwrap();
         assert!(
             !contents.contains("pre_switch_in"),
             "pull must strip hook commands: {contents}"

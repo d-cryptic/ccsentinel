@@ -19,10 +19,8 @@ impl ShellKind {
             Self::Zsh
         } else if shell.contains("fish") {
             Self::Fish
-        } else if shell.contains("bash") {
-            Self::Bash
         } else {
-            Self::Bash // safe default on Unix
+            Self::Bash // bash explicitly, and safe default on Unix
         }
     }
 }
@@ -193,7 +191,9 @@ pub fn env_exports(env_vars: &HashMap<String, String>, shell: &ShellKind) -> Str
             match shell {
                 ShellKind::Zsh | ShellKind::Bash => format!("unset {key}"),
                 ShellKind::Fish => format!("set -e {key}"),
-                ShellKind::PowerShell => format!("Remove-Item Env:{key} -ErrorAction SilentlyContinue"),
+                ShellKind::PowerShell => {
+                    format!("Remove-Item Env:{key} -ErrorAction SilentlyContinue")
+                }
             }
         } else {
             match shell {

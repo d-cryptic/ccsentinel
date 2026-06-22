@@ -33,15 +33,17 @@ pub fn write_pending_switch(profile: &str, session: &str) -> Result<()> {
     // Single-quote all values so the shell cannot break out of them.
     // Profile/session names are [a-zA-Z0-9\-_] by validate_name, but the
     // config_dir path (on Windows or non-standard setups) may contain quotes.
-    let config_dir =
-        shell_escape_single_quote(&platform::claude_config_dir(profile, session).display().to_string());
+    let config_dir = shell_escape_single_quote(
+        &platform::claude_config_dir(profile, session)
+            .display()
+            .to_string(),
+    );
     let content = format!(
         "export CST_CURRENT='{profile}:{session}'\nexport CLAUDE_CONFIG_DIR='{config_dir}'\n"
     );
     std::fs::write(path, content)?;
     Ok(())
 }
-
 
 /// Core daemon loop. Runs until cancelled.
 ///

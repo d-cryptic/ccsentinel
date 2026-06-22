@@ -20,21 +20,27 @@ pub fn configure(profile: &str) -> Result<()> {
     }
     let cfg = AutoSwitchConfig::load(&profile_dir)?;
     println!("Configuring auto-switch for profile: {profile}");
-    println!("  schedule.active_hours: {}", cfg
-        .schedule
-        .as_ref()
-        .map(|s| s.active_hours.as_str())
-        .unwrap_or("(unset)"));
-    println!("  schedule.timezone: {}", cfg
-        .schedule
-        .as_ref()
-        .map(|s| s.timezone.as_str())
-        .unwrap_or("(unset)"));
-    println!("  schedule.fallback: {}", cfg
-        .schedule
-        .as_ref()
-        .map(|s| s.fallback.as_str())
-        .unwrap_or("(unset)"));
+    println!(
+        "  schedule.active_hours: {}",
+        cfg.schedule
+            .as_ref()
+            .map(|s| s.active_hours.as_str())
+            .unwrap_or("(unset)")
+    );
+    println!(
+        "  schedule.timezone: {}",
+        cfg.schedule
+            .as_ref()
+            .map(|s| s.timezone.as_str())
+            .unwrap_or("(unset)")
+    );
+    println!(
+        "  schedule.fallback: {}",
+        cfg.schedule
+            .as_ref()
+            .map(|s| s.fallback.as_str())
+            .unwrap_or("(unset)")
+    );
     println!("  auto_switch_back: {}", cfg.auto_switch_back);
     println!();
     println!(
@@ -63,19 +69,14 @@ pub fn log() -> Result<()> {
         println!("No auto-switch events recorded.");
         return Ok(());
     }
-    println!(
-        "{:<24} {:<20} {:<20} {}",
-        "TIMESTAMP", "FROM", "TO", "REASON"
-    );
+    println!("{:<24} {:<20} {:<20} REASON", "TIMESTAMP", "FROM", "TO");
     println!("{}", "─".repeat(80));
     for ev in &events {
-        println!(
-            "{:<24} {:<20} {:<20} {}",
-            ev.timestamp.format("%Y-%m-%d %H:%M:%S UTC"),
-            format!("{}:{}", ev.from_profile, ev.from_session),
-            format!("{}:{}", ev.to_profile, ev.to_session),
-            format!("{} — {}", ev.reason, ev.detail),
-        );
+        let timestamp = ev.timestamp.format("%Y-%m-%d %H:%M:%S UTC");
+        let from = format!("{}:{}", ev.from_profile, ev.from_session);
+        let to = format!("{}:{}", ev.to_profile, ev.to_session);
+        let reason = format!("{} — {}", ev.reason, ev.detail);
+        println!("{timestamp:<24} {from:<20} {to:<20} {reason}");
     }
     Ok(())
 }

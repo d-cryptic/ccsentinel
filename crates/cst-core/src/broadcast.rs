@@ -182,5 +182,4 @@ mod tests {
         };
         assert!(Utc::now() >= b.expires_at);
     }
-
 }

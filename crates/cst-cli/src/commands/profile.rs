@@ -280,7 +280,9 @@ fn read_line() -> Result<String> {
         .lock()
         .lines()
         .next()
-        .ok_or_else(|| anyhow::anyhow!("unexpected end of stdin — this command requires interactive input"))?
+        .ok_or_else(|| {
+            anyhow::anyhow!("unexpected end of stdin — this command requires interactive input")
+        })?
         .map_err(Into::into)
 }
 

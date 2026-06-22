@@ -195,6 +195,6 @@ mod tests {
         state.record_rate_limit("work", 300, true);
         state.record_rate_limit("work", 180, false); // second hit replaces first
         assert_eq!(state.entries.len(), 1);
-        assert_eq!(state.entries[0].auto_switch_back, false);
+        assert!(!state.entries[0].auto_switch_back);
     }
 }

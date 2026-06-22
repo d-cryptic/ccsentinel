@@ -139,9 +139,11 @@ mod tests {
     #[test]
     fn test_save_and_load_roundtrip() {
         let dir = TempDir::new().unwrap();
-        let mut cfg = AutoSwitchConfig::default();
-        cfg.fallback_chain = vec!["backup-oauth".to_string(), "api-key".to_string()];
-        cfg.estimate_minutes = 180;
+        let cfg = AutoSwitchConfig {
+            fallback_chain: vec!["backup-oauth".to_string(), "api-key".to_string()],
+            estimate_minutes: 180,
+            ..Default::default()
+        };
         cfg.save(dir.path()).unwrap();
 
         let loaded = AutoSwitchConfig::load(dir.path()).unwrap();

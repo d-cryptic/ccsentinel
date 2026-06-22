@@ -83,9 +83,15 @@ mod tests {
         assert!(is_rate_limit_line("HTTP 429 Too Many Requests"));
         assert!(is_rate_limit_line("quota exceeded for this hour"));
         assert!(is_rate_limit_line("Usage limit reached for today"));
-        assert!(is_rate_limit_line(r#"{"status":429,"error":"too many requests"}"#));
-        assert!(is_rate_limit_line(r#"{"type":"api_error","error":{"type":"rate_limit_error"}}"#));
-        assert!(is_rate_limit_line(r#"{"error":{"type":"overloaded_error"}}"#));
+        assert!(is_rate_limit_line(
+            r#"{"status":429,"error":"too many requests"}"#
+        ));
+        assert!(is_rate_limit_line(
+            r#"{"type":"api_error","error":{"type":"rate_limit_error"}}"#
+        ));
+        assert!(is_rate_limit_line(
+            r#"{"error":{"type":"overloaded_error"}}"#
+        ));
     }
 
     #[test]
@@ -108,17 +114,23 @@ mod tests {
     #[test]
     fn test_no_false_positive_api_error() {
         // Standalone api_error without rate-limit context must not trigger
-        assert!(!is_rate_limit_line(r#"{"type":"api_error","message":"invalid request"}"#));
+        assert!(!is_rate_limit_line(
+            r#"{"type":"api_error","message":"invalid request"}"#
+        ));
         assert!(!is_rate_limit_line("api_error: malformed JSON body"));
     }
 
     #[test]
     fn test_no_false_positive_overloaded_prose() {
         // Bare "overloaded" in prose must not trigger; only overloaded_error type does
-        assert!(!is_rate_limit_line("the system is overloaded with requests"));
+        assert!(!is_rate_limit_line(
+            "the system is overloaded with requests"
+        ));
         assert!(!is_rate_limit_line("overloaded variable from the module"));
         // api_error + bare "overloaded" prose must also not trigger
-        assert!(!is_rate_limit_line("api_error: the system is overloaded with requests"));
+        assert!(!is_rate_limit_line(
+            "api_error: the system is overloaded with requests"
+        ));
     }
 
     #[test]

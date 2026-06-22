@@ -120,9 +120,7 @@ pub fn tick(current_profile: &str) -> Result<TickReport> {
                         report.advanced += 1;
                     }
                     Err(e) => {
-                        tracing::warn!(
-                            "pipeline auto-advance failed for '{current_profile}': {e}"
-                        );
+                        tracing::warn!("pipeline auto-advance failed for '{current_profile}': {e}");
                         report.errors += 1;
                     }
                 }

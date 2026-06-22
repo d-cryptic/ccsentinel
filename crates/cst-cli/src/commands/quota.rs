@@ -6,8 +6,8 @@
 use anyhow::Result;
 use cst_core::{
     auto_switch::scheduler::SchedulerState, config::GlobalConfig, history_parser, platform,
-    profile::ProfileManager, session::SessionManager, stats::SessionStats,
-    validate_profile_name, validate_session_name,
+    profile::ProfileManager, session::SessionManager, stats::SessionStats, validate_profile_name,
+    validate_session_name,
 };
 
 pub fn remaining() -> Result<()> {
@@ -142,13 +142,13 @@ pub fn remaining() -> Result<()> {
                 } else {
                     String::new()
                 };
+                let label = format!("{}{}", p.name, active_marker);
                 println!(
-                    "  {:<20} in:{:>8}  out:{:>8}{}{}",
-                    format!("{}{}", p.name, active_marker),
+                    "  {:<20} in:{:>8}  out:{:>8}{}",
+                    label,
                     format_tokens(tin),
                     format_tokens(tout),
                     rl_str,
-                    ""
                 );
             }
         }

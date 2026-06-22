@@ -112,7 +112,10 @@ mod tests {
         // A key that would allow shell injection
         std::fs::write(&path, "[env]\n\"FOO=bar;id\" = \"val\"\n").unwrap();
         let result = EnvOverlay::load(dir.path());
-        assert!(result.is_err(), "should reject key with shell metacharacters");
+        assert!(
+            result.is_err(),
+            "should reject key with shell metacharacters"
+        );
         let msg = result.unwrap_err().to_string();
         assert!(
             msg.contains("invalid env var name"),

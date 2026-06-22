@@ -1,5 +1,7 @@
 use anyhow::Result;
-use cst_core::{platform, shell::parse_profile_session, validate_profile_name, validate_session_name};
+use cst_core::{
+    platform, shell::parse_profile_session, validate_profile_name, validate_session_name,
+};
 
 pub async fn run_with_profile(profile_session: &str, cmd: &[String]) -> Result<()> {
     let (profile, session) = parse_profile_session(profile_session);

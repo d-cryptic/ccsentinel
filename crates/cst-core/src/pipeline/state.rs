@@ -66,7 +66,11 @@ impl PipelineState {
             .wrapping_sub(target.num_days_from_monday() as i64)
             .rem_euclid(7);
         let window_date = now.date_naive() - Duration::days(days_since);
-        Utc.from_utc_datetime(&window_date.and_hms_opt(0, 0, 0).expect("00:00:00 always valid"))
+        Utc.from_utc_datetime(
+            &window_date
+                .and_hms_opt(0, 0, 0)
+                .expect("00:00:00 always valid"),
+        )
     }
 }
 
@@ -109,7 +113,7 @@ mod tests {
     #[test]
     fn test_should_reset_in_current_window_false() {
         let now = Utc.with_ymd_and_hms(2026, 5, 13, 12, 0, 0).unwrap(); // Wed
-        // Reset Monday at 00:00 UTC (May 11, 2026 is Mon).
+                                                                        // Reset Monday at 00:00 UTC (May 11, 2026 is Mon).
         let monday = Utc.with_ymd_and_hms(2026, 5, 11, 0, 0, 0).unwrap();
         let state = PipelineState {
             last_weekly_reset: Some(monday + Duration::hours(1)), // after window start

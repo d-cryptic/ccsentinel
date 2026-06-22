@@ -111,7 +111,6 @@ impl Default for ProfileManager {
 }
 
 impl ProfileManager {
-
     fn profile_dir(&self, name: &str) -> PathBuf {
         self.profiles_dir.join(name)
     }
@@ -329,7 +328,10 @@ mod tests {
         // Name exceeding max length must be rejected
         let long_name = "a".repeat(MAX_PROFILE_NAME_LEN + 1);
         let err = mgr.create(&long_name, AuthType::OAuth).unwrap_err();
-        assert!(err.to_string().contains("at most"), "expected max-length error: {err}");
+        assert!(
+            err.to_string().contains("at most"),
+            "expected max-length error: {err}"
+        );
     }
 
     #[test]

@@ -62,19 +62,14 @@ pub fn logs() -> Result<()> {
         println!("No switch events recorded yet.");
         return Ok(());
     }
-    println!(
-        "{:<24} {:<20} {:<20} {}",
-        "TIMESTAMP", "FROM", "TO", "REASON"
-    );
+    println!("{:<24} {:<20} {:<20} REASON", "TIMESTAMP", "FROM", "TO");
     println!("{}", "─".repeat(80));
     for ev in &events {
-        println!(
-            "{:<24} {:<20} {:<20} {}",
-            ev.timestamp.format("%Y-%m-%d %H:%M:%S UTC"),
-            format!("{}:{}", ev.from_profile, ev.from_session),
-            format!("{}:{}", ev.to_profile, ev.to_session),
-            format!("{} — {}", ev.reason, ev.detail),
-        );
+        let timestamp = ev.timestamp.format("%Y-%m-%d %H:%M:%S UTC");
+        let from = format!("{}:{}", ev.from_profile, ev.from_session);
+        let to = format!("{}:{}", ev.to_profile, ev.to_session);
+        let reason = format!("{} — {}", ev.reason, ev.detail);
+        println!("{timestamp:<24} {from:<20} {to:<20} {reason}");
     }
     Ok(())
 }

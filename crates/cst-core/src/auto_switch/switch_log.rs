@@ -186,10 +186,16 @@ mod tests {
         let log = SwitchLog {
             path: dir.path().join("switch-log.jsonl"),
         };
-        log.append(&make_event("a", "b", SwitchReason::Manual)).unwrap();
-        log.append(&make_event("b", "c", SwitchReason::RateLimit)).unwrap();
+        log.append(&make_event("a", "b", SwitchReason::Manual))
+            .unwrap();
+        log.append(&make_event("b", "c", SwitchReason::RateLimit))
+            .unwrap();
         let all = log.last_n(100).unwrap();
-        assert_eq!(all.len(), 2, "should return all 2 events when n=100 > count=2");
+        assert_eq!(
+            all.len(),
+            2,
+            "should return all 2 events when n=100 > count=2"
+        );
         assert_eq!(all[0].from_profile, "a");
         assert_eq!(all[1].from_profile, "b");
     }

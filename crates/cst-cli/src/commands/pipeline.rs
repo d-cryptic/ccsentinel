@@ -1,9 +1,7 @@
 //! `cst next` and `cst pipeline ...` commands.
 
 use anyhow::{Context, Result};
-use cst_core::pipeline::{
-    AdvanceWhen, PipelineConfig, PipelineState, ThresholdChecker, Weekday,
-};
+use cst_core::pipeline::{AdvanceWhen, PipelineConfig, PipelineState, ThresholdChecker, Weekday};
 use cst_core::stats::SessionStats;
 use cst_core::{platform, validate_profile_name, GlobalConfig};
 use std::io::{self, Write};
@@ -132,7 +130,9 @@ pub fn configure(profile: &str) -> Result<()> {
     )?;
 
     println!();
-    println!("Threshold mode: 1) tokens_used  2) hours_active  3) tokens_used_weekly  4) manual_only");
+    println!(
+        "Threshold mode: 1) tokens_used  2) hours_active  3) tokens_used_weekly  4) manual_only"
+    );
     let mode = prompt("Choose [1-4]", Some("1"))?;
     let mut advance_when = AdvanceWhen::default();
     match mode.trim() {
@@ -162,10 +162,7 @@ pub fn configure(profile: &str) -> Result<()> {
     };
     cfg.validate()?;
     cfg.save(&profile_dir)?;
-    println!(
-        "\nWrote {}",
-        profile_dir.join("pipeline.toml").display()
-    );
+    println!("\nWrote {}", profile_dir.join("pipeline.toml").display());
     Ok(())
 }
 

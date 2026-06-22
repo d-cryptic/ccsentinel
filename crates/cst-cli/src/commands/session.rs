@@ -1,5 +1,7 @@
 use anyhow::Result;
-use cst_core::{platform, session::SessionManager, validate_profile_name, validate_session_name, GlobalConfig};
+use cst_core::{
+    platform, session::SessionManager, validate_profile_name, validate_session_name, GlobalConfig,
+};
 
 pub async fn dispatch(action: crate::SessionCommands) -> Result<()> {
     match action {

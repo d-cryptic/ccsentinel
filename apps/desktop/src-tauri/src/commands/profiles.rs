@@ -86,8 +86,8 @@ pub fn create_profile(
     if let Some(tpl_name) = template {
         if let Some(tpl) = cst_core::templates::find(&tpl_name) {
             let override_path = platform::profile_dir(&name).join("settings-override.json");
-            let json = serde_json::to_string_pretty(&tpl.settings_override)
-                .map_err(|e| e.to_string())?;
+            let json =
+                serde_json::to_string_pretty(&tpl.settings_override).map_err(|e| e.to_string())?;
             std::fs::write(override_path, json).map_err(|e| e.to_string())?;
         }
     }
