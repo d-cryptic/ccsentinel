@@ -227,14 +227,32 @@ fn render(f: &mut Frame, state: &TopState) {
     render_footer(f, chunks[3]);
 }
 
+// ── Palette (matches the desktop/web editorial-minimal theme) ──────────────
+const ACCENT: Color = Color::Rgb(94, 196, 182);
+const TEXT: Color = Color::Rgb(220, 224, 230);
+const MUTED: Color = Color::Rgb(154, 163, 174);
+const FAINT: Color = Color::Rgb(106, 114, 125);
+const SEL_BG: Color = Color::Rgb(22, 27, 34);
+
+/// A hairline-bordered block with a faint border and muted title.
+fn border(title: &str) -> Block<'_> {
+    Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(FAINT))
+        .title(Span::styled(
+            title.to_string(),
+            Style::default().fg(MUTED).add_modifier(Modifier::BOLD),
+        ))
+}
+
 fn render_header(f: &mut Frame, state: &TopState, area: Rect) {
     let daemon_status = if state.daemon_running {
         Span::styled(
-            " ● DAEMON ON ",
-            Style::default().fg(Color::Black).bg(Color::White),
+            " ● daemon on ",
+            Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
         )
     } else {
-        Span::styled(" ○ DAEMON OFF ", Style::default().fg(Color::DarkGray))
+        Span::styled(" ○ daemon off ", Style::default().fg(FAINT))
     };
 
     let active = if state.active_profile.is_empty() {
@@ -248,20 +266,22 @@ fn render_header(f: &mut Frame, state: &TopState, area: Rect) {
 
     let line = Line::from(vec![
         Span::styled(
-            format!(" {} CST TOP ", spin_char),
-            Style::default().add_modifier(Modifier::BOLD),
+            format!(" {} cst top ", spin_char),
+            Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
         ),
-        Span::raw(" │ "),
-        Span::styled(
-            format!("ACTIVE: {}", active),
-            Style::default().add_modifier(Modifier::BOLD),
-        ),
+        Span::styled(" │ ", Style::default().fg(FAINT)),
+        Span::styled("active: ", Style::default().fg(FAINT)),
+        Span::styled(active, Style::default().fg(TEXT)),
         Span::raw("  "),
         daemon_status,
     ]);
 
     let header = Paragraph::new(line)
-        .block(Block::default().borders(Borders::ALL))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(FAINT)),
+        )
         .alignment(Alignment::Left);
     f.render_widget(header, area);
 }
@@ -278,7 +298,7 @@ fn render_body(f: &mut Frame, state: &TopState, area: Rect) {
         "LAST USED",
     ]
     .iter()
-    .map(|h| Cell::from(*h).style(Style::default().add_modifier(Modifier::BOLD)));
+    .map(|h| Cell::from(*h).style(Style::default().fg(FAINT).add_modifier(Modifier::BOLD)));
 
     let header = Row::new(header_cells).height(1);
 
@@ -288,12 +308,12 @@ fn render_body(f: &mut Frame, state: &TopState, area: Rect) {
         .map(|r| {
             let is_active = r.profile == state.active_profile && r.session == state.active_session;
             let style = if is_active {
-                Style::default().add_modifier(Modifier::BOLD)
+                Style::default().fg(ACCENT).add_modifier(Modifier::BOLD)
             } else {
-                Style::default()
+                Style::default().fg(TEXT)
             };
 
-            let active_marker = if is_active { "▶ " } else { "  " };
+            let active_marker = if is_active { "● " } else { "  " };
 
             Row::new(vec![
                 Cell::from(format!("{}{}", active_marker, r.profile)).style(style),
@@ -322,12 +342,8 @@ fn render_body(f: &mut Frame, state: &TopState, area: Rect) {
 
     let table = Table::new(rows, widths)
         .header(header)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(" PROFILE USAGE "),
-        )
-        .row_highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+        .block(border(" Profile usage "))
+        .row_highlight_style(Style::default().bg(SEL_BG));
 
     f.render_widget(table, area);
 }
@@ -352,59 +368,48 @@ fn render_scheduler(f: &mut Frame, state: &TopState, area: Rect) {
             Line::from(vec![
                 Span::styled(
                     format!(" {} ", e.profile),
-                    Style::default().add_modifier(Modifier::BOLD),
+                    Style::default().fg(ACCENT).add_modifier(Modifier::BOLD),
                 ),
-                Span::raw("→ refills in "),
-                Span::styled(
-                    e.time_until_refill(),
-                    Style::default().add_modifier(Modifier::BOLD),
-                ),
+                Span::styled("→ refills in ", Style::default().fg(FAINT)),
+                Span::styled(e.time_until_refill(), Style::default().fg(TEXT)),
             ])
         })
         .collect();
 
     let content = if active.is_empty() {
         vec![Line::from(Span::styled(
-            " NO ACTIVE RATE LIMITS",
-            Style::default().fg(Color::DarkGray),
+            " No active rate limits",
+            Style::default().fg(FAINT),
         ))]
     } else {
         active
     };
 
-    let widget = Paragraph::new(content).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(" QUOTA TIMERS "),
-    );
+    let widget = Paragraph::new(content).block(border(" Quota timers "));
     f.render_widget(widget, area);
 }
 
 fn render_recent_events(f: &mut Frame, state: &TopState, area: Rect) {
     let lines: Vec<Line> = if state.recent_events.is_empty() {
         vec![Line::from(Span::styled(
-            " NO SWITCH EVENTS YET",
-            Style::default().fg(Color::DarkGray),
+            " No switch events yet",
+            Style::default().fg(FAINT),
         ))]
     } else {
         state
             .recent_events
             .iter()
-            .map(|e| Line::from(format!(" {}", e)))
+            .map(|e| Line::from(Span::styled(format!(" {}", e), Style::default().fg(TEXT))))
             .collect()
     };
 
-    let widget = Paragraph::new(lines).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title(" RECENT SWITCHES "),
-    );
+    let widget = Paragraph::new(lines).block(border(" Recent switches "));
     f.render_widget(widget, area);
 }
 
 fn render_footer(f: &mut Frame, area: Rect) {
-    let text = Paragraph::new(" q quit  r refresh  ↑↓ scroll  (refreshes every 1s)")
-        .style(Style::default().fg(Color::DarkGray))
+    let text = Paragraph::new(" q quit   r refresh   ↑↓ scroll   (refreshes every 1s)")
+        .style(Style::default().fg(FAINT))
         .alignment(Alignment::Left);
     f.render_widget(text, area);
 }
