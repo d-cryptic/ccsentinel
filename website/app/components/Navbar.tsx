@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ShieldIcon } from "./ShieldIcon";
 
 const REPO = "https://github.com/d-cryptic/ccsentinel";
 
 const links = [
   { label: "Features", href: "#features" },
-  { label: "How It Works", href: "#how" },
+  { label: "How it works", href: "#how" },
   { label: "Docs", href: `${REPO}#readme` },
   { label: "GitHub", href: REPO },
 ];
@@ -26,28 +27,26 @@ export function Navbar() {
     <nav
       className={`sticky top-0 z-40 transition-all duration-300 ${
         scrolled
-          ? "bg-bg/95 backdrop-blur-md border-b border-border"
-          : "bg-bg/70 border-b border-transparent"
+          ? "bg-ink/85 backdrop-blur-md border-b border-line"
+          : "bg-transparent border-b border-transparent"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <a href="#" className="flex items-center gap-2">
-          <span className="font-vt text-3xl text-cyan glow-cyan leading-none">
-            [CST]
-          </span>
-          <span className="hidden sm:inline font-mono text-xs uppercase tracking-widest text-dim">
-            claude_sentinel
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+        <a href="#" className="flex items-center gap-2.5">
+          <ShieldIcon className="h-5 w-5 text-accent" />
+          <span className="font-serif text-lg tracking-tight text-text">
+            Claude Sentinel
           </span>
         </a>
 
-        <div className="hidden md:flex items-center gap-7">
+        <div className="hidden md:flex items-center gap-8">
           {links.map((l) => (
             <a
               key={l.label}
               href={l.href}
               target={l.href.startsWith("http") ? "_blank" : undefined}
               rel={l.href.startsWith("http") ? "noopener noreferrer" : undefined}
-              className="font-mono text-xs uppercase tracking-widest text-dim hover:text-cyan hover:[text-shadow:_0_0_8px_#00FFFF] transition-all"
+              className="text-sm text-muted hover:text-text transition-colors"
             >
               {l.label}
             </a>
@@ -59,10 +58,9 @@ export function Navbar() {
             href={REPO}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-retro"
+            className="btn-primary"
           >
-            Get Started
-            <span aria-hidden="true">&gt;</span>
+            Get started
           </a>
         </div>
 
@@ -70,19 +68,19 @@ export function Navbar() {
           aria-label="Toggle menu"
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="md:hidden p-2 text-cyan border border-cyan"
+          className="md:hidden p-2 text-muted hover:text-text transition-colors"
         >
           <svg
-            width="20"
-            height="20"
+            width="22"
+            height="22"
             viewBox="0 0 24 24"
             fill="none"
             aria-hidden="true"
           >
             <path
-              d={open ? "M6 6l12 12M6 18L18 6" : "M4 7h16M4 12h16M4 17h16"}
+              d={open ? "M6 6l12 12M6 18L18 6" : "M4 8h16M4 16h16"}
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="1.6"
               strokeLinecap="round"
             />
           </svg>
@@ -90,8 +88,8 @@ export function Navbar() {
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-border bg-bg">
-          <div className="px-4 py-4 flex flex-col gap-4">
+        <div className="md:hidden border-t border-line bg-ink">
+          <div className="px-5 py-5 flex flex-col gap-4">
             {links.map((l) => (
               <a
                 key={l.label}
@@ -100,19 +98,19 @@ export function Navbar() {
                 rel={
                   l.href.startsWith("http") ? "noopener noreferrer" : undefined
                 }
-                className="font-mono text-xs uppercase tracking-widest text-dim hover:text-cyan"
+                className="text-sm text-muted hover:text-text transition-colors"
                 onClick={() => setOpen(false)}
               >
-                &gt; {l.label}
+                {l.label}
               </a>
             ))}
             <a
               href={REPO}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-retro-fill mt-2 w-full"
+              className="btn-primary mt-1 w-full"
             >
-              Get Started &gt;
+              Get started
             </a>
           </div>
         </div>

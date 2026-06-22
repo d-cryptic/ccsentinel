@@ -5,75 +5,56 @@ const REPO = "https://github.com/d-cryptic/ccsentinel";
 
 export function Hero() {
   return (
-    <section className="relative bg-bg overflow-hidden -mt-16 pt-16 min-h-screen flex items-center">
-      {/* Layered backgrounds */}
-      <div className="absolute inset-0 hero-grid" aria-hidden="true" />
-      <div className="absolute inset-0 horizon-glow" aria-hidden="true" />
+    <section className="relative overflow-hidden -mt-16 pt-16">
+      {/* Faint dotted backdrop + soft radial fade */}
+      <div className="absolute inset-0 dot-grid opacity-60" aria-hidden="true" />
       <div
-        className="absolute inset-0 perspective-grid opacity-30"
-        aria-hidden="true"
-      />
-      {/* Top fade */}
-      <div
-        className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-bg to-transparent"
+        className="absolute inset-x-0 top-0 h-[40rem] bg-[radial-gradient(ellipse_60%_50%_at_50%_0%,rgba(94,196,182,0.08),transparent_70%)]"
         aria-hidden="true"
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24 w-full">
-        <div className="text-center max-w-4xl mx-auto">
-          <p className="font-mono text-xs sm:text-sm text-cyan uppercase tracking-widest">
-            &gt; INTELLIGENT ACCOUNT MANAGER_
-            <span className="animate-blink">&#9613;</span>
-          </p>
+      <div className="relative z-10 max-w-6xl mx-auto px-5 sm:px-8 py-20 sm:py-28 w-full">
+        <div className="text-center max-w-3xl mx-auto animate-rise">
+          <p className="eyebrow justify-center">Intelligent account manager</p>
 
-          <h1 className="mt-6 font-vt text-6xl sm:text-7xl md:text-8xl lg:text-9xl leading-[0.95] tracking-tight text-white glow-cyan uppercase">
-            Switch Claude
+          <h1 className="mt-7 display text-5xl sm:text-6xl md:text-7xl">
+            Switch Claude accounts
             <br />
-            accounts
-            <br />
-            <span className="text-magenta glow-magenta">instantly</span>
+            <span className="italic text-accent">instantly.</span>
           </h1>
 
-          <p className="mt-8 font-mono text-sm sm:text-base text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            Manage all your Claude Code accounts, profiles, and sessions in one
-            place. Build a pipeline between accounts &mdash; switch context
-            with a single command or let the daemon advance automatically.
+          <p className="mt-7 text-base sm:text-lg text-muted max-w-xl mx-auto leading-relaxed">
+            Manage every Claude Code account, profile, and session in one place.
+            Build a pipeline between accounts — switch context with a single
+            command, or let the daemon advance automatically.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4">
+          <div className="mt-9 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
             <a
               href={REPO}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-retro-fill"
+              className="btn-primary"
             >
-              Install Now &gt;
+              Install now
             </a>
             <a
               href={REPO}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-retro"
+              className="btn-ghost"
             >
-              View GitHub
+              View on GitHub
             </a>
           </div>
 
-          <div className="mt-8 flex justify-center">
+          <div className="mt-7 flex justify-center">
             <CopyCommand command="cargo install cst" />
           </div>
         </div>
 
-        <div className="mt-16 sm:mt-20 relative animate-float">
+        <div className="mt-16 sm:mt-20">
           <TerminalCard />
-          <div
-            className="absolute -inset-x-12 -bottom-10 h-40 blur-3xl bg-magenta/20 rounded-full -z-10"
-            aria-hidden="true"
-          />
-          <div
-            className="absolute -inset-x-8 -top-6 h-24 blur-3xl bg-cyan/20 rounded-full -z-10"
-            aria-hidden="true"
-          />
         </div>
       </div>
     </section>

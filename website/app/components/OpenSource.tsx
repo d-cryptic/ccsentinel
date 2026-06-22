@@ -32,28 +32,25 @@ export async function OpenSource() {
   const latestCommit = stats?.latestCommit ?? null;
 
   return (
-    <section className="bg-bg border-y-2 border-yellow/30 relative overflow-hidden">
-      <div className="absolute inset-0 hero-grid opacity-30" aria-hidden="true" />
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <section className="border-t border-line">
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 py-24 sm:py-32">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <div>
-            <p className="eyebrow text-cyan">&gt; OPEN SOURCE_</p>
-            <h2 className="mt-4 font-vt text-5xl sm:text-6xl lg:text-7xl uppercase text-yellow glow-yellow leading-none">
-              {"// OPEN SOURCE"}
+            <p className="eyebrow">Open source</p>
+            <h2 className="mt-5 display text-4xl sm:text-5xl">
+              MIT licensed, community-driven.
             </h2>
-            <p className="mt-5 font-mono text-sm sm:text-base text-gray-400 leading-relaxed max-w-lg">
-              Claude Sentinel is{" "}
-              <span className="text-neongreen font-bold">MIT licensed</span> and
-              community-driven. Audit the code, file an issue, or send a pull
-              request.
+            <p className="mt-5 text-base text-muted leading-relaxed max-w-lg">
+              Claude Sentinel is fully open source. Audit the code, file an
+              issue, or send a pull request — it&rsquo;s built in the open.
             </p>
 
-            <div className="mt-7 flex flex-wrap items-center gap-4">
+            <div className="mt-8 flex flex-wrap items-center gap-5">
               <a
                 href={REPO}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-retro"
+                className="btn-ghost"
               >
                 <svg
                   width="16"
@@ -67,69 +64,63 @@ export async function OpenSource() {
                 Star on GitHub
               </a>
               {stars > 0 && (
-                <span className="inline-flex items-center gap-2 font-mono text-sm text-dim">
-                  <span className="font-vt text-3xl text-magenta glow-magenta">
-                    &#9733; {stars.toLocaleString()}
+                <span className="inline-flex items-baseline gap-2 text-muted">
+                  <span className="font-serif font-light text-2xl text-text">
+                    {stars.toLocaleString()}
                   </span>
-                  <span className="uppercase tracking-widest text-[11px]">
-                    stars
-                  </span>
+                  <span className="text-sm">stars</span>
                 </span>
               )}
             </div>
           </div>
 
-          <div className="relative">
-            <div className="bg-black border-2 border-cyan box-glow-cyan p-6 sm:p-7 crt">
-              <div className="flex items-center gap-3 pb-3 border-b border-cyan/30">
-                <div className="h-10 w-10 border-2 border-magenta text-magenta flex items-center justify-center font-vt text-xl">
-                  d/
+          <div className="card p-6 sm:p-7">
+            <div className="flex items-center gap-3 pb-4 border-b border-line">
+              <div className="h-10 w-10 rounded-lg border border-line text-accent flex items-center justify-center font-mono text-sm">
+                d/
+              </div>
+              <div>
+                <div className="text-sm text-text font-medium">
+                  d-cryptic/ccsentinel
                 </div>
-                <div>
-                  <div className="font-mono text-sm text-cyan glow-cyan">
-                    d-cryptic/ccsentinel
-                  </div>
-                  <div className="font-mono text-[11px] text-dim uppercase tracking-widest mt-0.5">
-                    Public &middot; MIT &middot; Rust
-                  </div>
+                <div className="text-[12px] text-faint mt-0.5">
+                  Public · MIT · Rust
                 </div>
               </div>
+            </div>
 
-              <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                {[
-                  { v: stars.toLocaleString(), l: "STARS" },
-                  { v: forks.toLocaleString(), l: "FORKS" },
-                  { v: "238", l: "TESTS" },
-                ].map((m) => (
-                  <div
-                    key={m.l}
-                    className="border border-magenta/50 bg-card py-3"
-                  >
-                    <div className="font-vt text-3xl text-magenta glow-magenta leading-none">
-                      {m.v}
-                    </div>
-                    <div className="text-[10px] uppercase tracking-widest text-dim mt-1 font-mono">
-                      {m.l}
-                    </div>
+            <div className="mt-5 grid grid-cols-3 gap-3 text-center">
+              {[
+                { v: stars.toLocaleString(), l: "Stars" },
+                { v: forks.toLocaleString(), l: "Forks" },
+                { v: "238", l: "Tests" },
+              ].map((m) => (
+                <div
+                  key={m.l}
+                  className="rounded-xl border border-line bg-ink/40 py-4"
+                >
+                  <div className="font-serif font-light text-2xl text-text leading-none">
+                    {m.v}
                   </div>
-                ))}
+                  <div className="text-[11px] text-faint mt-1.5">{m.l}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 font-mono text-[12.5px] space-y-1.5">
+              {latestCommit && (
+                <div className="flex justify-between">
+                  <span className="text-faint">updated</span>
+                  <span className="text-muted">{latestCommit}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-faint">build</span>
+                <span className="text-accent">passing</span>
               </div>
-
-              <div className="mt-5 font-mono text-[12px] space-y-1">
-                {latestCommit && (
-                  <div className="text-dim">
-                    <span className="text-yellow">updated:</span>{" "}
-                    <span className="text-gray-300">{latestCommit}</span>
-                  </div>
-                )}
-                <div className="text-dim">
-                  <span className="text-yellow">build:</span>{" "}
-                  <span className="text-neongreen phosphor">passing</span>
-                </div>
-                <div className="text-dim">
-                  <span className="text-yellow">tests:</span>{" "}
-                  <span className="text-neongreen phosphor">238 passing</span>
-                </div>
+              <div className="flex justify-between">
+                <span className="text-faint">tests</span>
+                <span className="text-accent">238 passing</span>
               </div>
             </div>
           </div>

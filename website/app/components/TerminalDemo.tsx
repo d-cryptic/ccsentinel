@@ -21,103 +21,92 @@ function bar(usage: number) {
 }
 
 function statusColor(s: Row["status"]) {
-  if (s === "active") return "text-neongreen";
-  if (s === "limited") return "text-magenta";
-  return "text-gray-500";
+  if (s === "active") return "text-accent";
+  if (s === "limited") return "text-rose-300/80";
+  return "text-faint";
 }
 
 function usageColor(u: number) {
-  if (u >= 85) return "text-magenta";
-  if (u >= 60) return "text-yellow";
-  return "text-neongreen";
+  if (u >= 85) return "text-rose-300/70";
+  if (u >= 60) return "text-amber-200/70";
+  return "text-accent/80";
 }
 
 export function TerminalDemo() {
   return (
-    <section className="bg-bg relative overflow-hidden border-t border-border">
-      <div
-        aria-hidden="true"
-        className="absolute -top-32 left-1/2 -translate-x-1/2 h-72 w-[40rem] rounded-full bg-magenta/15 blur-3xl"
-      />
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+    <section className="border-t border-line">
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 py-24 sm:py-32">
         <div className="max-w-2xl">
-          <p className="eyebrow text-cyan">&gt; LIVE VIEW_</p>
-          <h2 className="mt-4 font-vt text-5xl sm:text-6xl lg:text-7xl uppercase text-yellow glow-yellow leading-none">
-            {"// LIVE DASHBOARD"}
-          </h2>
-          <p className="mt-5 font-mono text-sm sm:text-base text-gray-400 leading-relaxed">
-            <code className="text-cyan">cst top</code> gives you an htop-style
+          <p className="eyebrow">Live view</p>
+          <h2 className="mt-5 display text-4xl sm:text-5xl">Live dashboard</h2>
+          <p className="mt-5 text-base text-muted leading-relaxed">
+            <code className="code-chip">cst top</code> gives you an htop-style
             dashboard with active profiles, auth types, token usage, and session
             activity at a glance.
           </p>
         </div>
 
-        {/* CRT Monitor frame */}
-        <div className="mt-12 p-2 sm:p-3 neon-border-magenta bg-black">
-          <div className="bg-black border border-magenta/40 crt overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-2 border-b border-magenta/40">
-              <span className="h-3 w-3 rounded-full bg-magenta" />
-              <span className="h-3 w-3 rounded-full bg-yellow" />
-              <span className="h-3 w-3 rounded-full bg-neongreen" />
-              <span className="ml-3 text-[11px] text-cyan font-mono uppercase tracking-widest">
-                cst top &mdash; 5 profiles
-              </span>
+        <div className="mt-12 card overflow-hidden shadow-2xl shadow-black/40">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-line">
+            <span className="h-2.5 w-2.5 rounded-full bg-line" />
+            <span className="h-2.5 w-2.5 rounded-full bg-line" />
+            <span className="h-2.5 w-2.5 rounded-full bg-line" />
+            <span className="ml-3 text-[11px] text-faint font-mono">
+              cst top — 5 profiles
+            </span>
+          </div>
+
+          <div className="p-4 sm:p-6 font-mono text-[12px] sm:text-[12.5px] leading-relaxed overflow-x-auto bg-ink/40">
+            <div className="mb-4 text-faint">
+              <span className="text-muted">claude-sentinel</span> v0.4.2{" "}
+              <span className="text-line">·</span>{" "}
+              <span className="text-text">5 profiles</span>{" "}
+              <span className="text-line">·</span>{" "}
+              <span className="text-accent">4 healthy</span>{" "}
+              <span className="text-line">·</span>{" "}
+              <span className="text-rose-300/80">1 limited</span>
             </div>
 
-            <div className="p-4 sm:p-6 font-mono text-[12px] sm:text-[12.5px] leading-relaxed overflow-x-auto phosphor">
-              <div className="mb-3">
-                <span className="text-cyan">claude-sentinel</span>{" "}
-                <span className="text-gray-500">v0.4.2</span>{" "}
-                <span className="text-gray-500">&middot;</span>{" "}
-                <span className="text-white">5 profiles</span>{" "}
-                <span className="text-gray-500">&middot;</span>{" "}
-                <span className="text-neongreen">4 healthy</span>{" "}
-                <span className="text-gray-500">&middot;</span>{" "}
-                <span className="text-magenta">1 limited</span>
-              </div>
+            <div className="grid grid-cols-[minmax(120px,1.5fr)_70px_1fr_70px_70px] gap-3 sm:gap-4 text-faint border-b border-line pb-2 mb-2 uppercase text-[10.5px] tracking-widest">
+              <div>Profile</div>
+              <div>Auth</div>
+              <div>Usage</div>
+              <div>Status</div>
+              <div className="text-right">Reset</div>
+            </div>
 
-              <div className="grid grid-cols-[minmax(120px,1.5fr)_70px_1fr_70px_70px] gap-3 sm:gap-4 text-cyan border-b border-cyan/30 pb-2 mb-2 uppercase text-[11px] tracking-widest">
-                <div>PROFILE</div>
-                <div>AUTH</div>
-                <div>USAGE</div>
-                <div>STATUS</div>
-                <div className="text-right">RESET</div>
-              </div>
-
-              {rows.map((r) => (
-                <div
-                  key={r.name}
-                  className="grid grid-cols-[minmax(120px,1.5fr)_70px_1fr_70px_70px] gap-3 sm:gap-4 py-1 items-center"
-                >
-                  <div className="text-white truncate">{r.name}</div>
-                  <div className="text-cyan">{r.auth}</div>
-                  <div className="flex items-center gap-2">
-                    <span className={usageColor(r.usage)}>{bar(r.usage)}</span>
-                    <span className="text-gray-500">{r.usage}%</span>
-                  </div>
-                  <div className={statusColor(r.status)}>{r.status}</div>
-                  <div className="text-gray-500 text-right">{r.reset}</div>
+            {rows.map((r) => (
+              <div
+                key={r.name}
+                className="grid grid-cols-[minmax(120px,1.5fr)_70px_1fr_70px_70px] gap-3 sm:gap-4 py-1 items-center"
+              >
+                <div className="text-text truncate">{r.name}</div>
+                <div className="text-muted">{r.auth}</div>
+                <div className="flex items-center gap-2">
+                  <span className={usageColor(r.usage)}>{bar(r.usage)}</span>
+                  <span className="text-faint">{r.usage}%</span>
                 </div>
-              ))}
-
-              <div className="mt-5 pt-3 border-t border-cyan/30 flex flex-wrap gap-3 sm:gap-4 text-gray-500">
-                <span>
-                  <span className="text-yellow">[u]</span> use
-                </span>
-                <span>
-                  <span className="text-yellow">[r]</span> rotate
-                </span>
-                <span>
-                  <span className="text-yellow">[d]</span> daemon
-                </span>
-                <span>
-                  <span className="text-yellow">[q]</span> quit
-                </span>
-                <span className="ml-auto">
-                  <span className="text-neongreen animate-blink">&#9679;</span>{" "}
-                  auto-switch on
-                </span>
+                <div className={statusColor(r.status)}>{r.status}</div>
+                <div className="text-faint text-right">{r.reset}</div>
               </div>
+            ))}
+
+            <div className="mt-5 pt-3 border-t border-line flex flex-wrap gap-4 text-faint">
+              <span>
+                <span className="text-muted">u</span> use
+              </span>
+              <span>
+                <span className="text-muted">r</span> rotate
+              </span>
+              <span>
+                <span className="text-muted">d</span> daemon
+              </span>
+              <span>
+                <span className="text-muted">q</span> quit
+              </span>
+              <span className="ml-auto inline-flex items-center gap-1.5">
+                <span className="text-accent">●</span> auto-switch on
+              </span>
             </div>
           </div>
         </div>

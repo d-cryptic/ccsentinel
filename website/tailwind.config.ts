@@ -8,48 +8,42 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: "#080808",
-        card: "#111111",
-        cyan: "#00FFFF",
-        neongreen: "#39FF14",
-        magenta: "#FF00FF",
-        yellow: "#FFE600",
-        blue: "#0066FF",
-        dim: "#888888",
-        border: "#222222",
+        // Cool near-black canvas + layered surfaces
+        ink: "#0B0E12",
+        surface: "#11151B",
+        "surface-2": "#161B22",
+        line: "#222933",
+        // Text scale
+        text: "#ECEFF3",
+        muted: "#9AA3AE",
+        faint: "#6A727D",
+        // Single restrained accent — muted teal
+        accent: "#5EC4B6",
+        "accent-dim": "#3E8C82",
       },
       fontFamily: {
-        vt: ["var(--font-vt)", "monospace"],
-        mono: ["var(--font-mono)", "monospace"],
-        ibm: ["var(--font-mono)", "monospace"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        serif: ["var(--font-serif)", "Georgia", "serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+      },
+      letterSpacing: {
+        widest: "0.22em",
+      },
+      maxWidth: {
+        prose: "42rem",
       },
       animation: {
-        blink: "blink 1s step-end infinite",
-        flicker: "flicker 0.15s infinite",
-        "slide-up": "slideUp 0.6s ease-out forwards",
-        "fade-in": "fadeIn 0.8s ease-out forwards",
-        float: "float 3s ease-in-out infinite",
+        rise: "rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "fade-in": "fadeIn 0.9s ease-out both",
       },
       keyframes: {
-        blink: {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0" },
-        },
-        flicker: {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.85" },
-        },
-        slideUp: {
-          from: { transform: "translateY(30px)", opacity: "0" },
+        rise: {
+          from: { transform: "translateY(16px)", opacity: "0" },
           to: { transform: "translateY(0)", opacity: "1" },
         },
         fadeIn: {
           from: { opacity: "0" },
           to: { opacity: "1" },
-        },
-        float: {
-          "0%, 100%": { transform: "translateY(0)" },
-          "50%": { transform: "translateY(-10px)" },
         },
       },
     },

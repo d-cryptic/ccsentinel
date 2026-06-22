@@ -3,57 +3,58 @@ type Props = { className?: string };
 export function TerminalCard({ className = "" }: Props) {
   return (
     <div
-      className={`relative w-full max-w-2xl mx-auto bg-black neon-border-green crt overflow-hidden ${className}`}
+      className={`relative w-full max-w-2xl mx-auto card overflow-hidden shadow-2xl shadow-black/40 ${className}`}
     >
       {/* Window chrome */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-neongreen/40 bg-black">
-        <span className="h-3 w-3 rounded-full bg-magenta" />
-        <span className="h-3 w-3 rounded-full bg-yellow" />
-        <span className="h-3 w-3 rounded-full bg-neongreen" />
-        <span className="ml-3 text-[11px] text-neongreen/70 font-mono uppercase tracking-widest">
-          ~/work/backend &mdash; cst
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-line">
+        <span className="h-2.5 w-2.5 rounded-full bg-line" />
+        <span className="h-2.5 w-2.5 rounded-full bg-line" />
+        <span className="h-2.5 w-2.5 rounded-full bg-line" />
+        <span className="ml-3 text-[11px] text-faint font-mono">
+          ~/work/backend — cst
         </span>
       </div>
 
-      {/* Body — phosphor green-on-black */}
-      <div className="p-5 sm:p-6 font-mono text-[13px] leading-relaxed phosphor">
-        <div>
-          <span>&gt;</span> ~/work/backend
-          <span className="text-magenta"> git:(main)</span>
+      {/* Body */}
+      <div className="p-5 sm:p-6 font-mono text-[13px] leading-relaxed bg-ink/40">
+        <div className="text-faint">
+          <span className="text-muted">~/work/backend</span>
+          <span className="text-accent-dim"> git:(main)</span>
         </div>
         <div className="mt-1">
-          <span className="text-cyan">$</span>{" "}
-          <span>cst use work:backend</span>
+          <span className="text-accent">$</span>{" "}
+          <span className="text-text">cst use work:backend</span>
         </div>
 
         <div className="mt-3 space-y-1">
-          <div>
-            <span className="text-cyan">[OK]</span> Switched to profile{" "}
-            <span className="text-yellow">work</span>
-            <span>:</span>
-            <span className="text-yellow">backend</span>
+          <div className="text-muted">
+            <span className="text-accent">✓</span> Switched to profile{" "}
+            <span className="text-text">work</span>
+            <span className="text-faint">:</span>
+            <span className="text-text">backend</span>
           </div>
-          <div className="pl-3 opacity-90">
-            auth: <span className="text-cyan">oauth</span> &middot; slot:{" "}
-            <span className="text-cyan">2/4</span> &middot; usage:{" "}
-            <span>23%</span>
+          <div className="pl-3 text-faint">
+            auth: <span className="text-muted">oauth</span> · slot:{" "}
+            <span className="text-muted">2/4</span> · usage:{" "}
+            <span className="text-muted">23%</span>
           </div>
-          <div className="pl-3 opacity-90">
+          <div className="pl-3 text-faint">
             CLAUDE_CONFIG_DIR ={" "}
-            <span className="text-cyan">~/.claude-sentinel/work/backend</span>
+            <span className="text-muted">~/.claude-sentinel/work/backend</span>
           </div>
         </div>
 
         <div className="mt-4">
-          <span className="text-cyan">$</span> <span>claude</span>
+          <span className="text-accent">$</span>{" "}
+          <span className="text-text">claude</span>
         </div>
-        <div className="mt-1">
-          <span className="text-magenta">&#9679;</span> Claude Code{" "}
-          <span className="opacity-70">v1.0 &middot; ready</span>
+        <div className="mt-1 text-muted">
+          <span className="text-accent">●</span> Claude Code{" "}
+          <span className="text-faint">v1.0 · ready</span>
         </div>
-        <div className="mt-1 opacity-80">
-          Listening for prompts&hellip;
-          <span className="inline-block w-2 h-4 bg-neongreen align-middle ml-1 animate-blink" />
+        <div className="mt-1 text-faint">
+          Listening for prompts…
+          <span className="inline-block w-1.5 h-3.5 bg-accent/70 align-middle ml-1" />
         </div>
       </div>
     </div>

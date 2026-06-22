@@ -2,33 +2,30 @@ const REPO = "https://github.com/d-cryptic/ccsentinel";
 
 export function FinalCTA() {
   return (
-    <section className="bg-black relative overflow-hidden border-t-2 border-magenta/40">
+    <section className="relative overflow-hidden border-t border-line">
       <div
         aria-hidden="true"
-        className="absolute inset-0 perspective-grid opacity-40"
+        className="absolute inset-0 bg-[radial-gradient(ellipse_55%_60%_at_50%_100%,rgba(94,196,182,0.1),transparent_70%)]"
       />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 horizon-glow"
-      />
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 text-center">
-        <p className="eyebrow text-cyan">&gt; GET STARTED_</p>
-        <h2 className="mt-6 font-vt text-5xl sm:text-7xl lg:text-8xl tracking-tight leading-[0.95] uppercase text-white glow-magenta">
-          Start managing Claude
+      <div className="relative max-w-3xl mx-auto px-5 sm:px-8 py-28 sm:py-36 text-center">
+        <p className="eyebrow justify-center">Get started</p>
+        <h2 className="mt-6 display text-4xl sm:text-6xl">
+          Manage Claude
           <br />
-          <span className="text-magenta glow-magenta">like a pro</span>
+          <span className="italic text-accent">like a pro.</span>
         </h2>
-        <p className="mt-6 font-mono text-sm sm:text-base text-gray-400 max-w-xl mx-auto leading-relaxed">
-          Open source, written in Rust, fast as the terminals you already love.
+        <p className="mt-6 text-base text-muted max-w-md mx-auto leading-relaxed">
+          Open source, written in Rust, as fast as the terminal you already
+          live in.
         </p>
-        <div className="mt-10 flex justify-center">
+        <div className="mt-9 flex justify-center">
           <a
             href={REPO}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-retro-magenta"
+            className="btn-primary"
           >
-            Get Claude Sentinel &gt;
+            Get Claude Sentinel
           </a>
         </div>
       </div>

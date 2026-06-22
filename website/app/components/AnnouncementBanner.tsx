@@ -1,22 +1,21 @@
 export function AnnouncementBanner() {
   return (
-    <div className="bg-black border-b-2 border-magenta/60 shadow-[0_0_12px_rgba(255,0,255,0.25)] py-2 px-3 sm:px-6 text-center text-xs sm:text-sm font-mono">
+    <div className="bg-surface border-b border-line py-2 px-4 text-center">
       <a
         href="https://github.com/d-cryptic/ccsentinel"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 text-neongreen hover:text-cyan transition-colors uppercase tracking-wider"
+        className="inline-flex items-center gap-2.5 text-xs text-muted hover:text-text transition-colors"
       >
-        <span aria-hidden="true" className="text-magenta">
-          &gt;
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-widest text-accent">
+          New
         </span>
-        <span className="hidden sm:inline">_ ACCOUNT PIPELINE IS LIVE — STAR US ON GITHUB</span>
-        <span className="sm:hidden">_ STAR ON GITHUB</span>
-        <span aria-hidden="true" className="text-cyan">
-          [&uarr;]
+        <span className="hidden sm:inline">
+          Account Pipeline is live — star the project on GitHub
         </span>
-        <span aria-hidden="true" className="animate-blink text-neongreen">
-          &#9613;
+        <span className="sm:hidden">Star on GitHub</span>
+        <span aria-hidden="true" className="text-faint">
+          &rarr;
         </span>
       </a>
     </div>

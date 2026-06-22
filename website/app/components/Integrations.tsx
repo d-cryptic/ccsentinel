@@ -11,27 +11,27 @@ const tools = [
 
 export function Integrations() {
   return (
-    <section className="bg-[#0A0A0A] border-t border-border relative overflow-hidden">
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24">
+    <section className="border-t border-line">
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 py-24 sm:py-28">
         <div className="text-center max-w-2xl mx-auto">
-          <p className="eyebrow text-magenta">&gt; ECOSYSTEM_</p>
-          <h2 className="mt-4 font-vt text-5xl sm:text-6xl lg:text-7xl uppercase text-cyan glow-cyan leading-none">
-            {"// COMPATIBLE WITH"}
+          <p className="eyebrow justify-center">Ecosystem</p>
+          <h2 className="mt-5 display text-4xl sm:text-5xl">
+            Fits the tools you already use.
           </h2>
-          <p className="mt-5 font-mono text-sm sm:text-base text-gray-400 leading-relaxed">
-            Drop-in integrations for the shells, multiplexers, and launchers
-            you already use.
+          <p className="mt-5 text-base text-muted leading-relaxed">
+            Drop-in integrations for the shells, multiplexers, and launchers in
+            your everyday workflow.
           </p>
         </div>
 
-        <div className="mt-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="mt-12 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {tools.map((t) => (
             <div
               key={t}
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 border-2 border-cyan/25 text-gray-300 hover:border-cyan hover:text-cyan hover:box-glow-cyan transition-all font-mono text-xs uppercase tracking-widest bg-card"
+              className="inline-flex items-center justify-center gap-2.5 rounded-xl border border-line bg-surface px-5 py-4 text-sm text-muted hover:text-text hover:border-accent/30 transition-colors"
             >
               <span
-                className="h-1.5 w-1.5 rounded-full bg-magenta"
+                className="h-1.5 w-1.5 rounded-full bg-accent"
                 aria-hidden="true"
               />
               {t}
