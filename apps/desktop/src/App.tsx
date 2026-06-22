@@ -5,7 +5,7 @@ import { SessionGrid } from "./components/SessionGrid";
 import { StatsPanel } from "./components/StatsPanel";
 import { useDaemonStore } from "./store/daemon";
 import { useProfileStore } from "./store/profiles";
-import "./styles/neubrutalism.css";
+import "./styles/theme.css";
 
 type Tab = "profiles" | "sessions" | "auto-switch" | "stats";
 
@@ -33,7 +33,31 @@ export default function App() {
     <div className="app-shell">
       {/* Tab bar */}
       <div className="tab-bar" role="tablist" aria-label="Main navigation">
-        <div className="tab-bar-title">🛡 SENTINEL</div>
+        <div className="tab-bar-title">
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            style={{ color: "var(--accent)" }}
+          >
+            <path
+              d="M12 2.5 4 5v6.2c0 4.6 3.2 8.8 8 10.3 4.8-1.5 8-5.7 8-10.3V5l-8-2.5Z"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+            <path
+              d="m9 12 2.2 2.2L15 10.4"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Claude Sentinel
+        </div>
         {TABS.map((t) => (
           <button
             key={t.id}

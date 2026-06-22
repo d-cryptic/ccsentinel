@@ -6,7 +6,16 @@ Cargo.lock
 # Node / Tauri frontend
 node_modules/
 apps/desktop/dist/
+apps/desktop/dist-screenshot/
 apps/desktop/.next/
+
+# Website build output
+website/out/
+website/.next/
+
+# Screenshot tooling output (committed copies live in docs/screenshots/)
+shots/
+**/shots/
 
 # Tauri build artifacts
 apps/desktop/src-tauri/target/
