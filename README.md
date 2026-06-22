@@ -65,6 +65,14 @@ cst top                         # live dashboard
 cst
 ```
 
+## Screenshots
+
+| Desktop app | Terminal UI |
+|---|---|
+| ![Desktop — Profiles](docs/screenshots/desktop/desktop-profiles.png) | ![Terminal UI](docs/screenshots/terminal/cst-tui.png) |
+
+The desktop app, terminal UI, and [landing page](docs/screenshots/web/web-desktop-full.png) share one minimal design language — a cool near-black canvas, hairline borders, and a single muted-teal accent.
+
 ## Documentation
 
 - [Install Guide](docs/INSTALL.md)
