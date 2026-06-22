@@ -181,9 +181,13 @@ fn retrieve_from_keychain(account: &str) -> Result<String> {
 
 fn delete_from_keychain(account: &str) -> Result<()> {
     let entry = keyring::Entry::new(SERVICE_NAME, account).context("creating keychain entry")?;
-    // Ignore error if entry doesn't exist
-    let _ = entry.delete_credential();
-    Ok(())
+    match entry.delete_credential() {
+        // A missing entry is fine — the desired end state (no secret) holds.
+        Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+        // Any other error (permissions, keyring unavailable) means the secret
+        // may still be present; surface it rather than reporting false success.
+        Err(e) => Err(e).context("deleting key from keychain"),
+    }
 }
 
 #[cfg(test)]

@@ -49,7 +49,8 @@ impl GlobalConfig {
             std::fs::create_dir_all(parent)?;
         }
         let contents = toml::to_string_pretty(self).context("serializing config")?;
-        std::fs::write(&path, contents)
+        // Atomic write so a crash mid-write can't corrupt the central state file.
+        crate::fs_util::write_atomic(&path, contents)
             .with_context(|| format!("writing config at {}", path.display()))
     }
 

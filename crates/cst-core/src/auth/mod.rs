@@ -86,7 +86,12 @@ pub fn activate_profile_auth_with(
                 }
             }
             // Remove any stale OAuth symlink
-            let _ = oauth::deactivate();
+            if let Err(e) = oauth::deactivate() {
+                tracing::warn!(
+                    "failed to remove stale OAuth symlink while activating {profile_name} — \
+                     ~/.claude.json may still point at the previous account: {e}"
+                );
+            }
         }
         AuthType::OAuth => {
             if let Err(e) = oauth::activate(&profile_dir.join("auth")) {
@@ -108,7 +113,12 @@ pub fn activate_profile_auth_with(
                     Err(e) => tracing::warn!("Bedrock env_vars failed for {profile_name}: {e}"),
                 }
             }
-            let _ = oauth::deactivate();
+            if let Err(e) = oauth::deactivate() {
+                tracing::warn!(
+                    "failed to remove stale OAuth symlink while activating {profile_name} — \
+                     ~/.claude.json may still point at the previous account: {e}"
+                );
+            }
         }
         AuthType::Vertex => {
             let vertex_path = profile_dir.join("auth").join("vertex.toml");
@@ -120,7 +130,12 @@ pub fn activate_profile_auth_with(
                     Err(e) => tracing::warn!("Vertex env_vars failed for {profile_name}: {e}"),
                 }
             }
-            let _ = oauth::deactivate();
+            if let Err(e) = oauth::deactivate() {
+                tracing::warn!(
+                    "failed to remove stale OAuth symlink while activating {profile_name} — \
+                     ~/.claude.json may still point at the previous account: {e}"
+                );
+            }
         }
     }
 

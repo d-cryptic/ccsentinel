@@ -9,6 +9,7 @@ pub mod auto_switch;
 pub mod broadcast;
 pub mod config;
 pub mod env_overlay;
+pub mod fs_util;
 pub mod history_parser;
 pub mod hooks;
 pub mod mcp;

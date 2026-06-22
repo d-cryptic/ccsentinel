@@ -24,8 +24,6 @@ dirs = { workspace = true }
 notify = { workspace = true }
 walkdir = { workspace = true }
 keyring = { workspace = true }
-aes-gcm = { workspace = true }
-rand = { workspace = true }
 cfg-if = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }

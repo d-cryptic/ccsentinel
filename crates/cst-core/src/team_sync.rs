@@ -122,27 +122,89 @@ fn sync_repo_path() -> PathBuf {
     platform::data_dir().join("team-sync-repo")
 }
 
+/// Reject git remote URLs that could trigger argument injection or a dangerous
+/// transport (e.g. `ext::sh -c …`, `file://`, or a `-`-prefixed value git
+/// would treat as an option). Only standard `https`/`http`, `ssh://`, and
+/// `user@host:path` scp-style URLs are accepted.
+fn validate_remote_url(url: &str) -> Result<()> {
+    if url.is_empty() {
+        anyhow::bail!("remote URL is empty");
+    }
+    if url.starts_with('-') {
+        anyhow::bail!("remote URL must not start with '-': {url}");
+    }
+    let lower = url.to_ascii_lowercase();
+    // Block git's command-executing transports. (`protocol.ext.allow=never` is
+    // also passed to `git clone` as defence-in-depth.) `file://` is allowed —
+    // it is a legitimate transport for a local or network-share team repo.
+    for bad in ["ext::", "fd::"] {
+        if lower.starts_with(bad) {
+            anyhow::bail!("unsupported/unsafe git transport in remote URL: {url}");
+        }
+    }
+    let allowed = lower.starts_with("https://")
+        || lower.starts_with("http://")
+        || lower.starts_with("ssh://")
+        || lower.starts_with("git://")
+        || lower.starts_with("file://")
+        // scp-style: user@host:path (no scheme, but contains ':' after a host)
+        || (url.contains('@') && url.contains(':'));
+    if !allowed {
+        anyhow::bail!(
+            "remote URL must be an https://, ssh://, git://, file:// or user@host:path URL: {url}"
+        );
+    }
+    Ok(())
+}
+
+/// Reject branch names git would misread as options or that break ref syntax.
+fn validate_branch(branch: &str) -> Result<()> {
+    if branch.is_empty() {
+        anyhow::bail!("branch name is empty");
+    }
+    if branch.starts_with('-') {
+        anyhow::bail!("branch name must not start with '-': {branch}");
+    }
+    if branch.contains("..") || branch.contains(' ') || branch.contains('~') {
+        anyhow::bail!("invalid branch name: {branch}");
+    }
+    if !branch
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '/' | '.'))
+    {
+        anyhow::bail!("branch name contains disallowed characters: {branch}");
+    }
+    Ok(())
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /// Initialise team sync: clone the remote into the sync-repo cache.
 ///
 /// If the repo already exists, updates the remote URL.
 pub fn init(remote_url: &str, branch: &str) -> Result<TeamSyncConfig> {
+    validate_remote_url(remote_url)?;
+    validate_branch(branch)?;
     let repo = sync_repo_path();
 
     if repo.exists() {
         // Update remote URL
-        git(&repo, &["remote", "set-url", "origin", remote_url])?;
+        git(&repo, &["remote", "set-url", "origin", "--", remote_url])?;
         println!("✓ Updated remote to {}", remote_url);
     } else {
         println!("Cloning {} …", remote_url);
-        // Shallow clone; it's OK if the repo is empty
+        // Shallow clone; it's OK if the repo is empty.
+        // `-c protocol.*.allow=never` blocks command-executing transports;
+        // `--` terminates options so the URL is never read as a flag.
         let status = Command::new("git")
             .args([
+                "-c",
+                "protocol.ext.allow=never",
                 "clone",
                 "--depth=1",
                 "--branch",
                 branch,
+                "--",
                 remote_url,
                 &repo.to_string_lossy(),
             ])
@@ -154,7 +216,7 @@ pub fn init(remote_url: &str, branch: &str) -> Result<TeamSyncConfig> {
                 // Remote may be empty — init a bare local repo and add the remote
                 std::fs::create_dir_all(&repo)?;
                 git(&repo, &["init", "-b", branch])?;
-                git(&repo, &["remote", "add", "origin", remote_url])?;
+                git(&repo, &["remote", "add", "origin", "--", remote_url])?;
                 println!("note: empty remote — will push on first `cst team push`");
             }
         }
@@ -180,9 +242,14 @@ pub fn push() -> Result<()> {
     let repo = sync_repo_path();
     ensure_repo_exists(&repo, &cfg)?;
 
-    // Pull first to avoid non-fast-forward rejections
+    // Pull first to avoid non-fast-forward rejections. A failure here is
+    // expected on first push (no upstream branch yet), but a failed rebase can
+    // leave the repo mid-rebase — abort it so we never commit/push a
+    // half-rebased or conflicted state. The subsequent push still fails loudly
+    // if the remote has truly diverged.
     if let Err(e) = git(&repo, &["pull", "--rebase", "origin", &cfg.branch]) {
-        tracing::warn!("pre-push rebase failed (continuing): {e}. If push fails, run: cst team pull --strategy theirs");
+        let _ = git(&repo, &["rebase", "--abort"]);
+        tracing::warn!("pre-push rebase failed (continuing from clean state): {e}. If push is rejected, run: cst team pull --strategy theirs");
     }
 
     // Copy profile configs into repo
@@ -623,6 +690,42 @@ mod tests {
 
     // Serialise tests that mutate CST_DATA_DIR to prevent parallel-test UB.
     static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn validate_remote_url_accepts_common_schemes() {
+        for url in [
+            "https://github.com/org/repo.git",
+            "ssh://git@github.com/org/repo.git",
+            "git@github.com:org/repo.git",
+            "git://example.com/repo.git",
+            "file:///tmp/repo",
+        ] {
+            assert!(validate_remote_url(url).is_ok(), "should accept {url}");
+        }
+    }
+
+    #[test]
+    fn validate_remote_url_rejects_command_transports_and_options() {
+        for url in [
+            "ext::sh -c 'touch /tmp/pwned'",
+            "fd::17/foo",
+            "--upload-pack=evil",
+            "-oProxyCommand=evil",
+            "",
+        ] {
+            assert!(validate_remote_url(url).is_err(), "should reject {url:?}");
+        }
+    }
+
+    #[test]
+    fn validate_branch_rejects_options_and_bad_chars() {
+        assert!(validate_branch("main").is_ok());
+        assert!(validate_branch("feature/team-sync").is_ok());
+        assert!(validate_branch("-x").is_err());
+        assert!(validate_branch("a..b").is_err());
+        assert!(validate_branch("has space").is_err());
+        assert!(validate_branch("").is_err());
+    }
 
     #[test]
     fn should_sync_all_by_default() {

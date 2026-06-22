@@ -41,8 +41,6 @@ walkdir = "2"
 
 # Credentials
 keyring = { version = "3", features = ["apple-native", "windows-native", "linux-native"] }
-aes-gcm = "0.10"
-rand = "0.8"
 
 # Platform
 cfg-if = "1"
@@ -60,3 +58,12 @@ interprocess = { version = "2", features = ["tokio"] }
 # Utilities
 which = "7"
 glob = "0.3"
+
+# Release profile lives at the workspace root — cargo ignores `[profile.*]`
+# tables in non-root member manifests. Optimized for small, fast binaries.
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

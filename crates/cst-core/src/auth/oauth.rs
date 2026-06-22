@@ -44,8 +44,11 @@ pub fn import_current(profile_auth_dir: &Path) -> Result<PathBuf> {
         bail!("~/.claude.json is already managed by claude-sentinel. Use `cst login` instead.");
     }
     std::fs::create_dir_all(profile_auth_dir)?;
+    crate::fs_util::secure_dir(profile_auth_dir)?;
     let dst = profile_auth_dir.join("oauth.json");
     std::fs::copy(&global_json, &dst)?;
+    // The OAuth token file must not be world-readable.
+    crate::fs_util::secure_file(&dst)?;
     Ok(dst)
 }
 

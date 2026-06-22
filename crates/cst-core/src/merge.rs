@@ -59,7 +59,9 @@ pub fn merge_and_write(
         std::fs::create_dir_all(parent)?;
     }
     let output = serde_json::to_string_pretty(&merged)?;
-    std::fs::write(output_path, output)
+    // Atomic write: Claude Code may be reading this file concurrently; a
+    // truncated/partial JSON would break it. write_atomic renames into place.
+    crate::fs_util::write_atomic(output_path, output)
         .with_context(|| format!("writing merged settings to {}", output_path.display()))
 }
 

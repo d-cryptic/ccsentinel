@@ -84,7 +84,7 @@ impl Profile {
         std::fs::create_dir_all(profile_dir)?;
         let path = profile_dir.join("profile.toml");
         let contents = toml::to_string_pretty(self)?;
-        std::fs::write(path, contents)?;
+        crate::fs_util::write_atomic(&path, contents)?;
         Ok(())
     }
 }
@@ -131,9 +131,12 @@ impl ProfileManager {
             template: None,
             hooks: ProfileHooks::default(),
         };
+        // Create the auth subdirectory first (and lock it down) so a failure
+        // never leaves a profile.toml without its credential directory.
+        let auth_dir = dir.join("auth");
+        std::fs::create_dir_all(&auth_dir)?;
+        crate::fs_util::secure_dir(&auth_dir)?;
         profile.save(&dir)?;
-        // Create auth subdirectory
-        std::fs::create_dir_all(dir.join("auth"))?;
         Ok(profile)
     }
 
