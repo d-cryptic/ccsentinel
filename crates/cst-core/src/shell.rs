@@ -38,14 +38,14 @@ cst() {
             if [ -z "$2" ]; then
                 command cst tui
             else
-                eval "$(command cst _env "$2" 2>&1)"
+                eval "$(command cst _env "$2")"
             fi
             ;;
         switch-all)
             # switch-all also switches the current shell immediately
             command cst switch-all "$2" "$3"
             if [ -n "$3" ]; then
-                eval "$(command cst _env "${3}:${CST_CURRENT#*:}" 2>&1)"
+                eval "$(command cst _env "${3}:${CST_CURRENT#*:}")"
             fi
             ;;
         *)
@@ -99,7 +99,7 @@ function cst
         if test -z "$argv[2]"
             command cst tui
         else
-            eval (command cst _env "$argv[2]" 2>&1)
+            eval (command cst _env "$argv[2]")
         end
     else
         command cst $argv
@@ -137,7 +137,7 @@ function cst {
         if (-not $args[1]) {
             & cst.exe tui
         } else {
-            Invoke-Expression (& cst.exe _env $args[1] 2>&1)
+            Invoke-Expression (& cst.exe _env $args[1])
         }
     } else {
         & cst.exe @args
@@ -265,6 +265,28 @@ mod tests {
         let code = shell_init_code(&ShellKind::Zsh);
         assert!(code.contains("function cst") || code.contains("cst()"));
         assert!(code.contains("_cst_check_switch"));
+    }
+
+    #[test]
+    fn test_shell_init_eval_does_not_capture_stderr() {
+        // Regression: `eval "$(cst _env ... 2>&1)"` merged cst's WARN logs into
+        // the eval, producing zsh parse errors on `cst use`. The eval must
+        // capture stdout ONLY; stderr goes to the terminal.
+        for shell in [
+            ShellKind::Zsh,
+            ShellKind::Bash,
+            ShellKind::Fish,
+            ShellKind::PowerShell,
+        ] {
+            let code = shell_init_code(&shell);
+            assert!(
+                !code.contains("_env \"$2\" 2>&1")
+                    && !code.contains("_env \"$argv[2]\" 2>&1")
+                    && !code.contains("_env $args[1] 2>&1")
+                    && !code.contains("CST_CURRENT#*:}\" 2>&1"),
+                "shell-init for {shell:?} must not pipe _env stderr into eval"
+            );
+        }
     }
 
     #[test]
