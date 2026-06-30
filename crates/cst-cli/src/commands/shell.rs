@@ -104,6 +104,11 @@ pub fn env_cmd(profile_session: &str) -> Result<()> {
         );
     }
 
+    // Also project the global MCP base into the home ~/.claude.json (the active
+    // profile's auth file) so Claude started OUTSIDE cst — the desktop app, or a
+    // shell that never set CLAUDE_CONFIG_DIR — sees the same base servers.
+    apply_global_mcp_base_to_home(&platform::global_claude_dir());
+
     // Update global config
     let mut cfg = cst_core::GlobalConfig::load().unwrap_or_default();
     cfg.current_profile = profile.clone();
@@ -261,6 +266,80 @@ fn read_global_mcp_base(global_claude_dir: &Path) -> HashMap<String, serde_json:
         ),
     }
     out
+}
+
+/// Merge the global MCP base into a `.claude.json`-style file: base servers are
+/// added, existing servers win on conflict, all other top-level keys are
+/// preserved, and the write is skipped when nothing changed. Best-effort.
+fn merge_global_base_into_file(file: &Path, global_claude_dir: &Path) {
+    const MAX_CLAUDE_JSON_BYTES: u64 = 50 * 1024 * 1024;
+    let base = read_global_mcp_base(global_claude_dir);
+    if base.is_empty() || !file.exists() {
+        return;
+    }
+    if let Ok(meta) = std::fs::metadata(file) {
+        if meta.len() > MAX_CLAUDE_JSON_BYTES {
+            tracing::warn!(
+                "{} is {} bytes (> {MAX_CLAUDE_JSON_BYTES}), skipping global MCP base merge",
+                file.display(),
+                meta.len()
+            );
+            return;
+        }
+    }
+    let mut root: serde_json::Value = match std::fs::read_to_string(file)
+        .ok()
+        .and_then(|c| serde_json::from_str(&c).ok())
+    {
+        Some(v) => v,
+        None => {
+            tracing::warn!(
+                "could not parse {}, skipping global MCP base merge",
+                file.display()
+            );
+            return;
+        }
+    };
+    if !root.is_object() {
+        return;
+    }
+    let existing: HashMap<String, serde_json::Value> = root
+        .get("mcpServers")
+        .and_then(|v| v.as_object())
+        .map(|m| m.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+        .unwrap_or_default();
+    // base < existing: existing servers win, so the base only adds missing ones.
+    let mut merged = base;
+    for (k, v) in &existing {
+        merged.insert(k.clone(), v.clone());
+    }
+    if merged == existing {
+        return;
+    }
+    if let Some(obj) = root.as_object_mut() {
+        obj.insert(
+            "mcpServers".to_string(),
+            serde_json::Value::Object(merged.into_iter().collect()),
+        );
+    }
+    match serde_json::to_string_pretty(&root) {
+        Ok(out) => {
+            if let Err(e) = fs_util::write_atomic(file, out) {
+                tracing::warn!("writing {} failed: {e}", file.display());
+            }
+        }
+        Err(e) => tracing::warn!("serializing {} failed: {e}", file.display()),
+    }
+}
+
+/// Project the global MCP base into the home `~/.claude.json` so Claude started
+/// outside cst (no CLAUDE_CONFIG_DIR — desktop app, plain shell) sees the same
+/// base servers. The home path is canonicalized first so we write through to the
+/// real file (the active profile's auth json) WITHOUT clobbering cst's symlink.
+fn apply_global_mcp_base_to_home(global_claude_dir: &Path) {
+    let home = platform::global_claude_json();
+    let target = std::fs::canonicalize(&home).unwrap_or(home);
+    merge_global_base_into_file(&target, global_claude_dir);
 }
 
 #[cfg(test)]
@@ -452,5 +531,72 @@ mod tests {
         .unwrap();
         assert!(v["mcpServers"]["keep"].is_object());
         assert!(v["mcpServers"].get("voicemode").is_none());
+    }
+
+    #[test]
+    fn global_base_merged_into_home_file_adds_and_preserves() {
+        let global = TempDir::new().unwrap();
+        std::fs::write(
+            global.path().join("mcp-servers.json"),
+            r#"{"mcpServers":{"voicemode":{"command":"uvx"}}}"#,
+        )
+        .unwrap();
+        let home = TempDir::new().unwrap();
+        let file = home.path().join(".claude.json");
+        std::fs::write(
+            &file,
+            r#"{"userID":"u1","mcpServers":{"keep":{"command":"node"}}}"#,
+        )
+        .unwrap();
+
+        merge_global_base_into_file(&file, global.path());
+
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+        assert_eq!(v["userID"], serde_json::json!("u1"));
+        assert!(v["mcpServers"]["keep"].is_object());
+        assert_eq!(
+            v["mcpServers"]["voicemode"]["command"],
+            serde_json::json!("uvx")
+        );
+    }
+
+    #[test]
+    fn global_base_home_existing_server_wins() {
+        let global = TempDir::new().unwrap();
+        std::fs::write(
+            global.path().join("mcp-servers.json"),
+            r#"{"mcpServers":{"voicemode":{"command":"uvx"}}}"#,
+        )
+        .unwrap();
+        let home = TempDir::new().unwrap();
+        let file = home.path().join(".claude.json");
+        std::fs::write(
+            &file,
+            r#"{"mcpServers":{"voicemode":{"command":"session-custom"}}}"#,
+        )
+        .unwrap();
+
+        merge_global_base_into_file(&file, global.path());
+
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
+        assert_eq!(
+            v["mcpServers"]["voicemode"]["command"],
+            serde_json::json!("session-custom")
+        );
+    }
+
+    #[test]
+    fn global_base_home_noop_without_base_file() {
+        let global = TempDir::new().unwrap();
+        let home = TempDir::new().unwrap();
+        let file = home.path().join(".claude.json");
+        let original = r#"{"mcpServers":{"keep":{"command":"node"}}}"#;
+        std::fs::write(&file, original).unwrap();
+
+        merge_global_base_into_file(&file, global.path());
+
+        assert_eq!(std::fs::read_to_string(&file).unwrap(), original);
     }
 }
