@@ -1,10 +1,12 @@
 use anyhow::Result;
 use cst_core::auth::{activate_profile_auth, activate_profile_auth_with};
 use cst_core::env_overlay::EnvOverlay;
+use cst_core::mcp::McpOverride;
 use cst_core::profile::Profile;
 use cst_core::shell::{env_exports, parse_profile_session, shell_init_code, ShellKind};
-use cst_core::{merge, platform, validate_profile_name, validate_session_name};
+use cst_core::{fs_util, merge, platform, validate_profile_name, validate_session_name};
 use std::collections::HashMap;
+use std::path::Path;
 
 pub fn shell_init(shell_arg: Option<String>) -> Result<()> {
     let shell = match shell_arg.as_deref() {
@@ -92,6 +94,12 @@ pub fn env_cmd(profile_session: &str) -> Result<()> {
         }
     }
 
+    // Apply MCP overrides (incl. addon MCP servers) into the session's
+    // .claude.json so they actually reach Claude Code. Best-effort.
+    if session_dir.exists() {
+        apply_mcp_override(&claude_config_dir, &session_dir);
+    }
+
     // Update global config
     let mut cfg = cst_core::GlobalConfig::load().unwrap_or_default();
     cfg.current_profile = profile.clone();
@@ -103,4 +111,176 @@ pub fn env_cmd(profile_session: &str) -> Result<()> {
     // Output exports
     print!("{}", env_exports(&vars, &shell));
     Ok(())
+}
+
+/// Read `<session>/.claude/.claude.json`, apply the session's `McpOverride` to
+/// its `mcpServers` object, and write the result back — preserving every other
+/// top-level key (read-modify-write).
+///
+/// Best-effort: a missing, oversized, or unparseable `.claude.json` must never
+/// abort the switch. We log a warning and continue, matching the surrounding code.
+fn apply_mcp_override(claude_config_dir: &Path, session_dir: &Path) {
+    // Guard against pathological `.claude.json` files (they can be large/stateful).
+    const MAX_CLAUDE_JSON_BYTES: u64 = 50 * 1024 * 1024;
+    let path = claude_config_dir.join(".claude.json");
+
+    // Load the override first; if there is nothing to apply and no file exists,
+    // skip to avoid creating a spurious .claude.json.
+    let ov = match McpOverride::load(session_dir) {
+        Ok(o) => o,
+        Err(e) => {
+            tracing::warn!("loading mcp-override failed: {e}");
+            return;
+        }
+    };
+    let override_empty = ov.add.is_empty() && ov.disable.is_empty();
+    if override_empty && !path.exists() {
+        return;
+    }
+
+    let mut root: serde_json::Value = if path.exists() {
+        if let Ok(meta) = std::fs::metadata(&path) {
+            if meta.len() > MAX_CLAUDE_JSON_BYTES {
+                tracing::warn!(
+                    "{} is {} bytes (> {MAX_CLAUDE_JSON_BYTES}), skipping MCP override",
+                    path.display(),
+                    meta.len()
+                );
+                return;
+            }
+        }
+        match std::fs::read_to_string(&path)
+            .ok()
+            .and_then(|c| serde_json::from_str(&c).ok())
+        {
+            Some(v) => v,
+            None => {
+                tracing::warn!("could not parse {}, skipping MCP override", path.display());
+                return;
+            }
+        }
+    } else {
+        serde_json::json!({ "mcpServers": {} })
+    };
+
+    if !root.is_object() {
+        tracing::warn!(
+            "{} is not a JSON object, skipping MCP override",
+            path.display()
+        );
+        return;
+    }
+
+    // Extract existing mcpServers, apply the override, write the merged map back.
+    let existing: HashMap<String, serde_json::Value> = root
+        .get("mcpServers")
+        .and_then(|v| v.as_object())
+        .map(|m| m.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+        .unwrap_or_default();
+    let merged = ov.apply(&existing);
+    let merged_value = serde_json::Value::Object(merged.into_iter().collect());
+    if let Some(obj) = root.as_object_mut() {
+        obj.insert("mcpServers".to_string(), merged_value);
+    }
+
+    match serde_json::to_string_pretty(&root) {
+        Ok(out) => {
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            if let Err(e) = fs_util::write_atomic(&path, out) {
+                tracing::warn!("writing {} failed: {e}", path.display());
+            }
+        }
+        Err(e) => tracing::warn!("serializing {} failed: {e}", path.display()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn apply_mcp_override_preserves_unrelated_keys() {
+        let session = TempDir::new().unwrap();
+        let claude_dir = session.path().join(".claude");
+        std::fs::create_dir_all(&claude_dir).unwrap();
+
+        // Existing .claude.json with stateful keys that must round-trip untouched.
+        std::fs::write(
+            claude_dir.join(".claude.json"),
+            r#"{"userID":"u123","projects":{"/x":{"y":1}},"mcpServers":{"keep":{"command":"node"}}}"#,
+        )
+        .unwrap();
+
+        // Override adds a server and disables nothing.
+        let mut add = HashMap::new();
+        add.insert(
+            "voicemode".to_string(),
+            serde_json::json!({"command": "uvx"}),
+        );
+        McpOverride {
+            disable: vec![],
+            add,
+        }
+        .save(session.path())
+        .unwrap();
+
+        apply_mcp_override(&claude_dir, session.path());
+
+        let v: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(claude_dir.join(".claude.json")).unwrap(),
+        )
+        .unwrap();
+        // Unrelated keys preserved.
+        assert_eq!(v["userID"], serde_json::json!("u123"));
+        assert_eq!(v["projects"]["/x"]["y"], serde_json::json!(1));
+        // Both old and added MCP servers present.
+        assert!(v["mcpServers"]["keep"].is_object());
+        assert_eq!(
+            v["mcpServers"]["voicemode"]["command"],
+            serde_json::json!("uvx")
+        );
+    }
+
+    #[test]
+    fn apply_mcp_override_creates_file_when_override_present() {
+        let session = TempDir::new().unwrap();
+        let claude_dir = session.path().join(".claude");
+        std::fs::create_dir_all(&claude_dir).unwrap();
+
+        let mut add = HashMap::new();
+        add.insert(
+            "voicemode".to_string(),
+            serde_json::json!({"command": "uvx"}),
+        );
+        McpOverride {
+            disable: vec![],
+            add,
+        }
+        .save(session.path())
+        .unwrap();
+
+        apply_mcp_override(&claude_dir, session.path());
+
+        let path = claude_dir.join(".claude.json");
+        assert!(path.exists());
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(
+            v["mcpServers"]["voicemode"]["command"],
+            serde_json::json!("uvx")
+        );
+    }
+
+    #[test]
+    fn apply_mcp_override_no_override_no_file_is_noop() {
+        let session = TempDir::new().unwrap();
+        let claude_dir = session.path().join(".claude");
+        std::fs::create_dir_all(&claude_dir).unwrap();
+        // No mcp-override.json, no .claude.json — must not create one.
+        apply_mcp_override(&claude_dir, session.path());
+        assert!(!claude_dir.join(".claude.json").exists());
+    }
 }

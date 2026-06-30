@@ -1,3 +1,4 @@
+pub mod addons;
 pub mod auto_detect;
 pub mod auto_switch;
 pub mod daemon;

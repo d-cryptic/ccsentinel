@@ -108,6 +108,12 @@ enum Commands {
         action: SessionCommands,
     },
 
+    /// Addons — declare MCP servers / settings hooks once, auto-apply to every session.
+    Addons {
+        #[command(subcommand)]
+        action: AddonCommands,
+    },
+
     /// Auto-switch daemon management.
     Daemon {
         #[command(subcommand)]
@@ -266,6 +272,28 @@ enum SessionCommands {
 }
 
 #[derive(Subcommand)]
+enum AddonCommands {
+    /// List available addons (built-in + on-disk), marking which are enabled.
+    List,
+    /// Pretty-print an addon's JSON definition.
+    Show { name: String },
+    /// Write built-in addon files to the claude-sentinel addons dir.
+    Init,
+    /// Enable addons and apply them to all sessions immediately.
+    Enable {
+        #[arg(required = true)]
+        names: Vec<String>,
+    },
+    /// Disable addons (stops future application).
+    Disable {
+        #[arg(required = true)]
+        names: Vec<String>,
+    },
+    /// Apply all enabled addons to all profiles/sessions now.
+    Apply,
+}
+
+#[derive(Subcommand)]
 enum TeamCommands {
     /// Connect to a shared git remote for profile sync.
     Init {
@@ -371,6 +399,7 @@ async fn main() -> Result<()> {
             note,
         }) => profile_cmd::add_key(&profile, slot, source.as_deref(), note.as_deref()),
         Some(Commands::Session { action }) => session_cmd::dispatch(action).await,
+        Some(Commands::Addons { action }) => commands::addons::dispatch(action),
         Some(Commands::Daemon { action }) => commands::daemon::dispatch(action).await,
         Some(Commands::AutoSwitch { action }) => commands::auto_switch::dispatch(action).await,
         Some(Commands::Pause { minutes }) => commands::auto_switch::pause(minutes),

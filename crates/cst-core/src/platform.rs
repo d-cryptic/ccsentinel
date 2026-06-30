@@ -59,6 +59,11 @@ pub fn profiles_dir() -> PathBuf {
     data_dir().join("profiles")
 }
 
+/// Directory that holds all addon definitions (`<data_dir>/addons/`).
+pub fn addons_dir() -> PathBuf {
+    data_dir().join("addons")
+}
+
 /// Directory for a specific profile.
 pub fn profile_dir(name: &str) -> PathBuf {
     profiles_dir().join(name)

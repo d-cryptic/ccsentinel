@@ -3,6 +3,7 @@
 //! All domain logic lives here. No direct CLI I/O in this crate.
 //! The CLI (`cst-cli`) and Tauri app both depend on this crate.
 
+pub mod addons;
 pub mod auth;
 pub mod auto_detect;
 pub mod auto_switch;

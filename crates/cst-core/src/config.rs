@@ -15,6 +15,9 @@ pub struct GlobalConfig {
     /// Currently active session name (defaults to "default").
     #[serde(default = "default_session")]
     pub current_session: String,
+    /// Names of addons applied to every profile/session.
+    #[serde(default)]
+    pub addons_enabled: Vec<String>,
 }
 
 fn default_session() -> String {
@@ -26,6 +29,7 @@ impl Default for GlobalConfig {
         Self {
             current_profile: String::new(),
             current_session: default_session(),
+            addons_enabled: Vec::new(),
         }
     }
 }
@@ -73,6 +77,18 @@ impl GlobalConfig {
         Ok(())
     }
 
+    /// Enable an addon (dedupes; no-op if already enabled).
+    pub fn enable_addon(&mut self, name: &str) {
+        if !self.addons_enabled.iter().any(|n| n == name) {
+            self.addons_enabled.push(name.to_string());
+        }
+    }
+
+    /// Disable an addon (removes from the enabled list if present).
+    pub fn disable_addon(&mut self, name: &str) {
+        self.addons_enabled.retain(|n| n != name);
+    }
+
     /// Return `"profile:session"` string.
     pub fn current_ref(&self) -> String {
         if self.current_profile.is_empty() {
@@ -102,6 +118,7 @@ mod tests {
         let cfg = GlobalConfig {
             current_profile: "work".into(),
             current_session: "backend".into(),
+            addons_enabled: Vec::new(),
         };
         cfg.save_to(&path).unwrap();
 
@@ -123,6 +140,7 @@ mod tests {
         let cfg = GlobalConfig {
             current_profile: "work".into(),
             current_session: "backend".into(),
+            addons_enabled: Vec::new(),
         };
         assert_eq!(cfg.current_ref(), "work:backend");
     }
@@ -131,5 +149,29 @@ mod tests {
     fn test_current_ref_empty_when_no_profile() {
         let cfg = GlobalConfig::default();
         assert!(cfg.current_ref().is_empty());
+    }
+
+    #[test]
+    fn test_addons_enabled_serde_default_back_compat() {
+        // An old config.toml with no addons_enabled key must still parse.
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(
+            &path,
+            "current_profile = \"work\"\ncurrent_session = \"default\"\n",
+        )
+        .unwrap();
+        let cfg = GlobalConfig::load_from(&path).unwrap();
+        assert!(cfg.addons_enabled.is_empty());
+    }
+
+    #[test]
+    fn test_enable_disable_addon_dedupes() {
+        let mut cfg = GlobalConfig::default();
+        cfg.enable_addon("voicemode");
+        cfg.enable_addon("voicemode");
+        assert_eq!(cfg.addons_enabled, vec!["voicemode".to_string()]);
+        cfg.disable_addon("voicemode");
+        assert!(cfg.addons_enabled.is_empty());
     }
 }

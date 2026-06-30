@@ -73,6 +73,8 @@ impl SessionManager {
         session.save(&dir)?;
         // Create the .claude config directory and populate with symlinks
         setup_claude_dir(&dir.join(".claude"), global_claude_dir)?;
+        // Apply globally-enabled addons (MCP servers + settings hooks).
+        apply_enabled_addons(&dir);
         Ok(session)
     }
 
@@ -157,7 +159,25 @@ impl SessionManager {
     pub fn sync_symlinks(&self, name: &str, global_claude_dir: &Path) -> Result<()> {
         let dir = self.session_dir(name);
         setup_claude_dir(&dir.join(".claude"), global_claude_dir)?;
+        // Re-apply globally-enabled addons so new MCP servers / hooks reach
+        // sessions created before the addon was enabled.
+        apply_enabled_addons(&dir);
         Ok(())
+    }
+}
+
+/// Apply globally-enabled addons to a session directory.
+///
+/// Best-effort: a missing/unreadable global config must never break session
+/// creation or sync, so failures are logged and swallowed.
+fn apply_enabled_addons(session_dir: &Path) {
+    match crate::config::GlobalConfig::load() {
+        Ok(cfg) => {
+            if let Err(e) = crate::addons::apply_to_session(&cfg.addons_enabled, session_dir) {
+                tracing::warn!("applying addons to {} failed: {e}", session_dir.display());
+            }
+        }
+        Err(e) => tracing::debug!("skipping addon apply (config load failed): {e}"),
     }
 }
 
