@@ -97,7 +97,11 @@ pub fn env_cmd(profile_session: &str) -> Result<()> {
     // Apply MCP overrides (incl. addon MCP servers) into the session's
     // .claude.json so they actually reach Claude Code. Best-effort.
     if session_dir.exists() {
-        apply_mcp_override(&claude_config_dir, &session_dir);
+        apply_mcp_override(
+            &claude_config_dir,
+            &session_dir,
+            &platform::global_claude_dir(),
+        );
     }
 
     // Update global config
@@ -119,7 +123,7 @@ pub fn env_cmd(profile_session: &str) -> Result<()> {
 ///
 /// Best-effort: a missing, oversized, or unparseable `.claude.json` must never
 /// abort the switch. We log a warning and continue, matching the surrounding code.
-fn apply_mcp_override(claude_config_dir: &Path, session_dir: &Path) {
+fn apply_mcp_override(claude_config_dir: &Path, session_dir: &Path, global_claude_dir: &Path) {
     // Guard against pathological `.claude.json` files (they can be large/stateful).
     const MAX_CLAUDE_JSON_BYTES: u64 = 50 * 1024 * 1024;
     let path = claude_config_dir.join(".claude.json");
@@ -133,8 +137,15 @@ fn apply_mcp_override(claude_config_dir: &Path, session_dir: &Path) {
             return;
         }
     };
+    // Global MCP base: servers declared once in `<global>/mcp-servers.json`
+    // (i.e. ~/.claude/mcp-servers.json) are merged into EVERY session's
+    // .claude.json, mirroring how the global settings.json propagates hooks.
+    // This is what makes e.g. voicemode universal across all profiles without
+    // a per-session override.
+    let global_base = read_global_mcp_base(global_claude_dir);
+
     let override_empty = ov.add.is_empty() && ov.disable.is_empty();
-    if override_empty && !path.exists() {
+    if override_empty && global_base.is_empty() && !path.exists() {
         return;
     }
 
@@ -171,13 +182,23 @@ fn apply_mcp_override(claude_config_dir: &Path, session_dir: &Path) {
         return;
     }
 
-    // Extract existing mcpServers, apply the override, write the merged map back.
+    // Merge mcpServers with precedence (low -> high): global base <
+    // session-existing servers < override.add; override.disable removes from
+    // the union. Skip the write entirely when nothing changed, to avoid
+    // churning the (large, stateful) .claude.json on every switch.
     let existing: HashMap<String, serde_json::Value> = root
         .get("mcpServers")
         .and_then(|v| v.as_object())
         .map(|m| m.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
         .unwrap_or_default();
-    let merged = ov.apply(&existing);
+    let mut base = global_base;
+    for (k, v) in &existing {
+        base.insert(k.clone(), v.clone());
+    }
+    let merged = ov.apply(&base);
+    if merged == existing {
+        return;
+    }
     let merged_value = serde_json::Value::Object(merged.into_iter().collect());
     if let Some(obj) = root.as_object_mut() {
         obj.insert("mcpServers".to_string(), merged_value);
@@ -194,6 +215,52 @@ fn apply_mcp_override(claude_config_dir: &Path, session_dir: &Path) {
         }
         Err(e) => tracing::warn!("serializing {} failed: {e}", path.display()),
     }
+}
+
+/// Read the global MCP base — `<global_claude_dir>/mcp-servers.json` — and
+/// return its server map. Accepts the canonical `{"mcpServers": { ... }}`
+/// shape or a bare `{ name: config }` map. Returns an empty map (never errors)
+/// when the file is absent, too large, or unparseable; the merge degrades to
+/// the prior per-session behaviour.
+fn read_global_mcp_base(global_claude_dir: &Path) -> HashMap<String, serde_json::Value> {
+    const MAX_BASE_BYTES: u64 = 5 * 1024 * 1024;
+    let mut out: HashMap<String, serde_json::Value> = HashMap::new();
+    let path = global_claude_dir.join("mcp-servers.json");
+    if !path.exists() {
+        return out;
+    }
+    if let Ok(meta) = std::fs::metadata(&path) {
+        if meta.len() > MAX_BASE_BYTES {
+            tracing::warn!(
+                "{} is {} bytes (> {MAX_BASE_BYTES}), ignoring global MCP base",
+                path.display(),
+                meta.len()
+            );
+            return out;
+        }
+    }
+    match std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|c| serde_json::from_str::<serde_json::Value>(&c).ok())
+    {
+        Some(v) => {
+            let servers = v
+                .get("mcpServers")
+                .and_then(|m| m.as_object())
+                .cloned()
+                .or_else(|| v.as_object().cloned());
+            if let Some(obj) = servers {
+                for (k, val) in obj {
+                    out.insert(k, val);
+                }
+            }
+        }
+        None => tracing::warn!(
+            "could not parse {}, ignoring global MCP base",
+            path.display()
+        ),
+    }
+    out
 }
 
 #[cfg(test)]
@@ -227,7 +294,11 @@ mod tests {
         .save(session.path())
         .unwrap();
 
-        apply_mcp_override(&claude_dir, session.path());
+        apply_mcp_override(
+            &claude_dir,
+            session.path(),
+            std::path::Path::new("/no/such/global"),
+        );
 
         let v: serde_json::Value = serde_json::from_str(
             &std::fs::read_to_string(claude_dir.join(".claude.json")).unwrap(),
@@ -262,7 +333,11 @@ mod tests {
         .save(session.path())
         .unwrap();
 
-        apply_mcp_override(&claude_dir, session.path());
+        apply_mcp_override(
+            &claude_dir,
+            session.path(),
+            std::path::Path::new("/no/such/global"),
+        );
 
         let path = claude_dir.join(".claude.json");
         assert!(path.exists());
@@ -280,7 +355,102 @@ mod tests {
         let claude_dir = session.path().join(".claude");
         std::fs::create_dir_all(&claude_dir).unwrap();
         // No mcp-override.json, no .claude.json — must not create one.
-        apply_mcp_override(&claude_dir, session.path());
+        apply_mcp_override(
+            &claude_dir,
+            session.path(),
+            std::path::Path::new("/no/such/global"),
+        );
         assert!(!claude_dir.join(".claude.json").exists());
+    }
+
+    #[test]
+    fn global_mcp_base_injected_into_empty_session() {
+        let session = TempDir::new().unwrap();
+        let claude_dir = session.path().join(".claude");
+        std::fs::create_dir_all(&claude_dir).unwrap();
+        let global = TempDir::new().unwrap();
+        std::fs::write(
+            global.path().join("mcp-servers.json"),
+            r#"{"mcpServers":{"voicemode":{"command":"uvx"}}}"#,
+        )
+        .unwrap();
+
+        // No session .claude.json, no override — voicemode comes purely from the
+        // global base, proving it propagates universally like global hooks.
+        apply_mcp_override(&claude_dir, session.path(), global.path());
+
+        let v: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(claude_dir.join(".claude.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            v["mcpServers"]["voicemode"]["command"],
+            serde_json::json!("uvx")
+        );
+    }
+
+    #[test]
+    fn session_server_wins_over_global_base() {
+        let session = TempDir::new().unwrap();
+        let claude_dir = session.path().join(".claude");
+        std::fs::create_dir_all(&claude_dir).unwrap();
+        std::fs::write(
+            claude_dir.join(".claude.json"),
+            r#"{"mcpServers":{"voicemode":{"command":"session-custom"}}}"#,
+        )
+        .unwrap();
+        let global = TempDir::new().unwrap();
+        std::fs::write(
+            global.path().join("mcp-servers.json"),
+            r#"{"mcpServers":{"voicemode":{"command":"uvx"}}}"#,
+        )
+        .unwrap();
+
+        apply_mcp_override(&claude_dir, session.path(), global.path());
+
+        let v: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(claude_dir.join(".claude.json")).unwrap(),
+        )
+        .unwrap();
+        // A session-specific definition takes precedence over the global base.
+        assert_eq!(
+            v["mcpServers"]["voicemode"]["command"],
+            serde_json::json!("session-custom")
+        );
+    }
+
+    #[test]
+    fn override_disable_removes_global_base_server() {
+        let session = TempDir::new().unwrap();
+        let claude_dir = session.path().join(".claude");
+        std::fs::create_dir_all(&claude_dir).unwrap();
+        // Session already has voicemode (e.g. from a prior base merge) + a keeper.
+        std::fs::write(
+            claude_dir.join(".claude.json"),
+            r#"{"mcpServers":{"keep":{"command":"node"},"voicemode":{"command":"uvx"}}}"#,
+        )
+        .unwrap();
+        let global = TempDir::new().unwrap();
+        std::fs::write(
+            global.path().join("mcp-servers.json"),
+            r#"{"mcpServers":{"voicemode":{"command":"uvx"}}}"#,
+        )
+        .unwrap();
+        // Per-session disable wins over the global base.
+        McpOverride {
+            disable: vec!["voicemode".to_string()],
+            add: HashMap::new(),
+        }
+        .save(session.path())
+        .unwrap();
+
+        apply_mcp_override(&claude_dir, session.path(), global.path());
+
+        let v: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(claude_dir.join(".claude.json")).unwrap(),
+        )
+        .unwrap();
+        assert!(v["mcpServers"]["keep"].is_object());
+        assert!(v["mcpServers"].get("voicemode").is_none());
     }
 }
