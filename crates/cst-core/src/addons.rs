@@ -9,7 +9,7 @@
 //! {
 //!   "name": "voicemode",
 //!   "description": "…",
-//!   "mcpServers": { "voicemode": { "type": "stdio", "command": "uvx", "args": [] } },
+//!   "mcpServers": { "voicemode": { "type": "stdio", "command": "voicemode-mcp-launcher", "args": [] } },
 //!   "settings": { "hooks": { … } }
 //! }
 //! ```
@@ -222,8 +222,8 @@ fn voicemode_addon() -> Addon {
     let mcp_servers = serde_json::from_value(serde_json::json!({
         "voicemode": {
             "type": "stdio",
-            "command": "uvx",
-            "args": ["--from", "voice-mode", "voicemode-mcp-launcher"]
+            "command": "voicemode-mcp-launcher",
+            "args": []
         }
     }))
     .expect("static voicemode mcpServers is valid JSON object");
